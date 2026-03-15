@@ -8,3 +8,4 @@ Mark items with `[done]` when complete, or Claude will do it.
 
 <!-- Add suggestions below this line -->
 
+A structured way for me to answer your questions, that can be expanded to all communications (like replacing this suggestions.md file) so we can converse async
