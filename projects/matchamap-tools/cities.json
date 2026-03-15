@@ -1,0 +1,15 @@
+{
+  "cities": [
+    {"name": "Toronto",      "radius": 5000},
+    {"name": "Vancouver",    "radius": 5000},
+    {"name": "New York",     "radius": 6000},
+    {"name": "Los Angeles",  "radius": 7000},
+    {"name": "San Francisco","radius": 5000},
+    {"name": "Tokyo",        "radius": 8000},
+    {"name": "London",       "radius": 6000},
+    {"name": "Melbourne",    "radius": 5000}
+  ],
+  "defaults": {
+    "radius": 5000
+  }
+}
