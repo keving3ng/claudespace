@@ -63,12 +63,11 @@ state = {
     "interval_seconds": $INTERVAL_SECONDS,
     "started_at": "$START_TIME",
     "session_id": "$SESSION_ID",
-    "last_run_at": None,
-    "last_cycle_num": 0
+    "last_run_at": None
 }
 with open('$STATE_FILE', 'w') as f:
     json.dump(state, f, indent=2)
-print(f"  State written: {$CYCLES} cycles remaining")
+print(f"  State written: {$CYCLES} runs remaining")
 EOF
 
 # --- Write launchd plist ---
@@ -118,17 +117,30 @@ PLIST_EOF
 
 echo "  Plist written to: $PLIST_DEST"
 
-# --- Unload any existing job ---
-launchctl unload "$PLIST_DEST" 2>/dev/null || true
+# --- Unload any existing job (avoids "Load failed: 5" when already loaded on macOS 14+) ---
+LAUNCHD_DOMAIN="gui/$(id -u)"
+launchctl bootout "$LAUNCHD_DOMAIN" "$PLIST_DEST" 2>/dev/null || launchctl unload "$PLIST_DEST" 2>/dev/null || true
 
-# --- Load the job ---
-launchctl load "$PLIST_DEST"
-echo "  launchd job loaded: $LABEL"
+# --- Load the job (bootstrap works on macOS 14+ where load can fail with error 5) ---
+if launchctl bootstrap "$LAUNCHD_DOMAIN" "$PLIST_DEST" 2>/dev/null; then
+    echo "  launchd job loaded: $LABEL (bootstrap)"
+else
+    launchctl load "$PLIST_DEST"
+    echo "  launchd job loaded: $LABEL (load)"
+fi
 
-echo ""
+# --- Run first cycle now (foreground) so it's actually invoked and visible ---
+if [[ "$RUN_NOW" = true ]]; then
+    echo ""
+    echo "  Running first cycle now (foreground)..."
+    echo ""
+    bash "$WORKSPACE/scripts/run_cycle.sh" || true
+    echo ""
+fi
+
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "  Session started!"
-echo "  $CYCLES cycles × $(( INTERVAL_SECONDS / 60 )) min = ~$(( CYCLES * INTERVAL_SECONDS / 3600 )) hours total"
+echo "  $CYCLES runs × $(( INTERVAL_SECONDS / 60 )) min = ~$(( CYCLES * INTERVAL_SECONDS / 3600 )) hours total"
 echo ""
 echo "  Monitor:  ./scripts/status.sh"
 echo "  Logs:     tail -f logs/runner.log"

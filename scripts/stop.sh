@@ -22,5 +22,10 @@ print(f"  Cycles zeroed out.")
 EOF
 fi
 
-launchctl unload "$PLIST_DEST" 2>/dev/null && echo "  launchd job unloaded." || echo "  (job was not loaded)"
+LAUNCHD_DOMAIN="gui/$(id -u)"
+if launchctl bootout "$LAUNCHD_DOMAIN" "$PLIST_DEST" 2>/dev/null || launchctl unload "$PLIST_DEST" 2>/dev/null; then
+    echo "  launchd job unloaded."
+else
+    echo "  (job was not loaded)"
+fi
 echo "Done."

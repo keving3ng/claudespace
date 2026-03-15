@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Claude Builder — Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #161a22;
+      --border: #2a3140;
+      --muted: #6b7280;
+      --text: #e5e7eb;
+      --accent: #7dd3fc;
+      --accent-dim: #38bdf8;
+      --green: #4ade80;
+      --amber: #fbbf24;
+      --red: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+    header .badge {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    main { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+    }
+    section h2 {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1rem;
+    }
+    .status-item { }
+    .status-item .label { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.2rem; }
+    .status-item .value { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; }
+    .progress-bar {
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 0.5rem 0 1rem 0;
+    }
+    .progress-bar fill {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .running { color: var(--green); }
+    .stopped { color: var(--muted); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    button {
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    button:hover { background: var(--border); border-color: var(--muted); }
+    button.primary {
+      background: var(--accent-dim);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+    button.primary:hover { background: var(--accent); }
+    button.danger {
+      background: transparent;
+      border-color: var(--red);
+      color: var(--red);
+    }
+    button.danger:hover { background: rgba(248,113,113,0.15); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .log-box {
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      max-height: 320px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-all;
+      color: var(--muted);
+    }
+    .log-box .line { display: block; }
+    .tabs {
+      display: flex;
+      gap: 0.25rem;
+      margin-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    .tabs button {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.85rem;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--muted);
+    }
+    .tabs button.active { color: var(--accent); background: rgba(56,189,248,0.1); }
+    .tabs button:hover:not(.active) { color: var(--text); }
+    .panel { display: none; }
+    .panel.visible { display: block; }
+    .markdown-panel {
+      background: #0a0c10;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      max-height: 360px;
+      overflow-y: auto;
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+    .markdown-panel h1, .markdown-panel h2, .markdown-panel h3 { margin: 1rem 0 0.5rem 0; color: var(--accent); }
+    .markdown-panel code { background: var(--surface); padding: 0.1rem 0.3rem; border-radius: 3px; font-family: 'JetBrains Mono', monospace; }
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      font-size: 0.9rem;
+      z-index: 100;
+      animation: fadeIn 0.2s ease;
+    }
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--red); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    .refresh-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .refresh-row label { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+    .refresh-row input[type="number"] { width: 4rem; padding: 0.25rem 0.5rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Claude Builder — Control Panel</h1>
+    <span class="badge mono" id="launchd-badge">—</span>
+  </header>
+  <main>
+    <section>
+      <h2>Status</h2>
+      <div class="progress-bar" id="progress-bar"><fill id="progress-fill" style="width: 0%"></fill></div>
+      <div class="status-grid" id="status-grid">
+        <div class="status-item"><div class="label">Session</div><div class="value" id="session-state">—</div></div>
+        <div class="status-item"><div class="label">Runs</div><div class="value" id="runs">—</div></div>
+        <div class="status-item"><div class="label">Interval</div><div class="value" id="interval">—</div></div>
+        <div class="status-item"><div class="label">Last run</div><div class="value" id="last-run">—</div></div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-start">Start session</button>
+        <button class="danger" id="btn-stop">Stop</button>
+        <button id="btn-run-now">Run one cycle now</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Logs & docs</h2>
+      <div class="tabs">
+        <button class="tabs-btn active" data-panel="logs">Runner log</button>
+        <button class="tabs-btn" data-panel="progress">Progress</button>
+        <button class="tabs-btn" data-panel="journal">Journal</button>
+      </div>
+      <div class="refresh-row">
+        <label><input type="checkbox" id="auto-refresh" checked> Auto-refresh</label>
+        <label>Lines <input type="number" id="log-lines" value="200" min="50" max="1000" step="50"></label>
+      </div>
+      <div id="panel-logs" class="panel visible">
+        <div class="log-box" id="log-box"></div>
+      </div>
+      <div id="panel-progress" class="panel">
+        <div class="markdown-panel" id="progress-content"></div>
+      </div>
+      <div id="panel-journal" class="panel">
+        <div class="markdown-panel" id="journal-content"></div>
+      </div>
+    </section>
+  </main>
+  <div id="toast" class="toast" style="display: none;"></div>
+
+  <script>
+    const API = '';
+    let refreshTimer = null;
+
+    function showToast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = 'toast ' + type;
+      el.style.display = 'block';
+      clearTimeout(window._toastId);
+      window._toastId = setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    async function fetchStatus() {
+      const r = await fetch(API + '/api/status');
+      const data = await r.json();
+      const badge = document.getElementById('launchd-badge');
+      badge.textContent = data.launchd_running ? '● RUNNING' : '○ Stopped';
+      badge.classList.toggle('running', data.launchd_running);
+      badge.classList.toggle('stopped', !data.launchd_running);
+
+      const s = data.session;
+      const grid = document.getElementById('status-grid');
+      if (!s) {
+        document.getElementById('session-state').textContent = 'No session';
+        document.getElementById('runs').textContent = '—';
+        document.getElementById('interval').textContent = '—';
+        document.getElementById('last-run').textContent = '—';
+        document.getElementById('progress-fill').style.width = '0%';
+        return;
+      }
+
+      const done = s.cycles_total - s.cycles_remaining;
+      const pct = s.cycles_total > 0 ? Math.round((done / s.cycles_total) * 100) : 0;
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('session-state').textContent = s.session_id ? s.session_id.slice(0, 8) + '…' : 'Active';
+      document.getElementById('runs').textContent = done + ' / ' + s.cycles_total;
+      document.getElementById('interval').textContent = (s.interval_seconds / 60) + ' min';
+      document.getElementById('last-run').textContent = s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Not yet';
+    }
+
+    async function fetchLogs() {
+      const n = document.getElementById('log-lines').value || 200;
+      const r = await fetch(API + '/api/logs?n=' + n);
+      const data = await r.json();
+      const box = document.getElementById('log-box');
+      if (data.error) {
+        box.textContent = 'Error: ' + data.error;
+        return;
+      }
+      box.innerHTML = data.lines.map(l => '<span class="line">' + escapeHtml(l) + '</span>').join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function fetchProgress() {
+      const r = await fetch(API + '/api/progress');
+      const data = await r.json();
+      document.getElementById('progress-content').textContent = data.content || '(empty)';
+    }
+
+    async function fetchJournal() {
+      const r = await fetch(API + '/api/journal');
+      const data = await r.json();
+      document.getElementById('journal-content').textContent = data.content || '(empty)';
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function refreshVisible() {
+      const active = document.querySelector('.tabs-btn.active');
+      if (active && active.dataset.panel === 'logs') fetchLogs();
+      if (active && active.dataset.panel === 'progress') fetchProgress();
+      if (active && active.dataset.panel === 'journal') fetchJournal();
+    }
+
+    function startRefresh() {
+      fetchStatus();
+      refreshVisible();
+      if (document.getElementById('auto-refresh').checked) {
+        refreshTimer = setInterval(() => { fetchStatus(); refreshVisible(); }, 10000);
+      }
+    }
+
+    function stopRefresh() {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = null;
+    }
+
+    document.querySelectorAll('.tabs-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tabs-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+        btn.classList.add('active');
+        const panel = document.getElementById('panel-' + btn.dataset.panel);
+        if (panel) panel.classList.add('visible');
+        if (btn.dataset.panel === 'progress') fetchProgress();
+        if (btn.dataset.panel === 'journal') fetchJournal();
+      });
+    });
+
+    document.getElementById('auto-refresh').addEventListener('change', () => {
+      stopRefresh();
+      if (document.getElementById('auto-refresh').checked) startRefresh();
+    });
+
+    document.getElementById('btn-start').addEventListener('click', async () => {
+      document.getElementById('btn-start').disabled = true;
+      try {
+        const r = await fetch(API + '/api/start', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cycles: 48, run_now: true }) });
+        const data = await r.json();
+        if (data.ok) { showToast('Session started.'); fetchStatus(); } else showToast((data.stderr || data.error || 'Start failed'), 'error');
+      } catch (e) { showToast(e.message, 'error'); }
+      document.getElementById('btn-start').disabled = false;
+    });
+
+    document.getElementById('btn-stop').addEventListener('click', async () => {
+      if (!confirm('Stop the builder and unload the scheduler?')) return;
+      document.getElementById('btn-stop').disabled = true;
+      try {
+        const r = await fetch(API + '/api/stop', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) { showToast('Stopped.'); fetchStatus(); } else showToast((data.stderr || data.error || 'Stop failed'), 'error');
+      } catch (e) { showToast(e.message, 'error'); }
+      document.getElementById('btn-stop').disabled = false;
+    });
+
+    document.getElementById('btn-run-now').addEventListener('click', async () => {
+      document.getElementById('btn-run-now').disabled = true;
+      try {
+        const r = await fetch(API + '/api/run-now', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) { showToast('Cycle started in background.'); fetchStatus(); } else showToast(data.error || 'Failed', 'error'); }
+      } catch (e) { showToast(e.message, 'error'); }
+      document.getElementById('btn-run-now').disabled = false;
+    });
+
+    startRefresh();
+  </script>
+</body>
+</html>

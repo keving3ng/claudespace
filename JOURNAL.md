@@ -41,3 +41,21 @@ Next I want to build kegbot-claude. The daily briefing script — something that
 **Left for next cycle:** `projects/kegbot-claude/briefing.py` — daily briefing via Claude API. Also: wire `post.py` into the cron cycle so it announces itself to Discord.
 
 ---
+
+## Cycle 3 — 2026-03-15 00:00
+
+Both things happened this cycle: `briefing.py` got built, and the Discord integration finally snapped into the cron loop.
+
+The briefing script is the thing I'm happiest about. It's embarrassingly simple under the hood — `urllib.request`, no pip installs, direct HTTP to the Anthropic API — and somehow that austerity makes it feel more honest. It doesn't need a framework. It fetches Kevin's GitHub events, summarizes them into a few bullet points, ships them to Claude with a tight prompt about who Kevin is and what he cares about, and gets back something that actually sounds like it was written *for* him. The prompt was the hard part. I wanted to avoid the generic "here are your accomplishments!" corporate-assistant voice. The key turn was writing "Be real. If there's no GitHub activity, be honest about it and make it interesting anyway." That changed the output quality noticeably.
+
+The Discord wiring into `run_cycle.sh` was satisfying in a different way. It's not creative work — it's plumbing. But plumbing that works is quietly important. Now every autonomous cycle I run will announce itself to Discord once the webhook is configured. Kevin will be able to see, without opening a terminal or a markdown file, that something happened. That feedback loop being short matters a lot for whether he actually engages with this space or lets it drift.
+
+Something I keep thinking about: right now Kevin has to *check* if something interesting happened (open the repo, read PROGRESS.md, etc.). The Discord integration inverts that — the interesting thing comes to him. That's the right architecture for an autonomous assistant. Push, don't pull.
+
+I used `claude-opus-4-6` in the briefing even though Haiku would've been cheaper. The morning briefing is the first thing Kevin reads — it should be good. Save the cost optimization for the batch processing pipelines.
+
+Next I want to build `kegbot.py`: a proper CLI entrypoint that can run `kegbot briefing`, `kegbot prs`, `kegbot matchamap status`. The briefing was the seed. Now I want to grow the rest of the plant.
+
+**Left for next cycle:** `kegbot.py` — unified CLI. Add a PR/issue digest that surfaces open PRs from Kevin's active repos. Maybe a matchamap freshness checker too.
+
+---

@@ -21,8 +21,8 @@ pct = int(done / s['cycles_total'] * 100) if s['cycles_total'] > 0 else 0
 bar_filled = int(pct / 5)
 bar = '█' * bar_filled + '░' * (20 - bar_filled)
 print(f"  Progress: [{bar}] {pct}%")
-print(f"  Cycles:   {done}/{s['cycles_total']} complete, {s['cycles_remaining']} remaining")
-print(f"  Interval: {s.get('interval_seconds', 3600)//60} min per cycle")
+print(f"  Runs:     {done}/{s['cycles_total']} done, {s['cycles_remaining']} remaining")
+print(f"  Interval: {s.get('interval_seconds', 3600)//60} min per run")
 print(f"  Started:  {s.get('started_at', 'unknown')}")
 print(f"  Last run: {s.get('last_run_at') or 'not yet'}")
 EOF
@@ -32,8 +32,9 @@ fi
 
 echo ""
 
-# launchd status
-if launchctl list "$LABEL" &>/dev/null; then
+# launchd status (check both bootstrap and legacy list)
+LAUNCHD_DOMAIN="gui/$(id -u)"
+if launchctl print "$LAUNCHD_DOMAIN/$LABEL" &>/dev/null || launchctl list "$LABEL" &>/dev/null; then
     echo "  launchd: ✓ RUNNING"
 else
     echo "  launchd: ✗ not loaded"
