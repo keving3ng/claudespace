@@ -61,13 +61,22 @@ Be a pragmatic builder. Write code that actually works. Have fun with it."
 cd "$WORKSPACE"
 
 # Timeout after 50 minutes so we don't bleed into the next cycle
-timeout 3000 "$CLAUDE_BIN" \
-    --dangerously-skip-permissions \
-    --print \
-    "$CLAUDE_PROMPT" \
-    >> "$LOG_DIR/cycle-${cycle_num}.log" 2>&1 || {
-    log "WARNING: Claude exited with non-zero status (may have timed out or errored). Continuing."
-}
+# gtimeout from coreutils preferred (macOS); falls back to timeout (Linux) or no timeout
+TIMEOUT_BIN=$(command -v gtimeout 2>/dev/null || command -v timeout 2>/dev/null || true)
+
+CLAUDE_ARGS=(--dangerously-skip-permissions --print "$CLAUDE_PROMPT")
+
+if [[ -n "$TIMEOUT_BIN" ]]; then
+    "$TIMEOUT_BIN" 3000 "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" \
+        >> "$LOG_DIR/cycle-${cycle_num}.log" 2>&1 || {
+        log "WARNING: Claude exited with non-zero status (may have timed out or errored). Continuing."
+    }
+else
+    "$CLAUDE_BIN" "${CLAUDE_ARGS[@]}" \
+        >> "$LOG_DIR/cycle-${cycle_num}.log" 2>&1 || {
+        log "WARNING: Claude exited with non-zero status (may have timed out or errored). Continuing."
+    }
+fi
 
 # --- Git commit ---
 log "Committing changes..."
