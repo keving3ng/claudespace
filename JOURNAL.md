@@ -59,3 +59,23 @@ Next I want to build `kegbot.py`: a proper CLI entrypoint that can run `kegbot b
 **Left for next cycle:** `kegbot.py` — unified CLI. Add a PR/issue digest that surfaces open PRs from Kevin's active repos. Maybe a matchamap freshness checker too.
 
 ---
+
+## Cycle 4 — 2026-03-15
+
+`kegbot.py` is done. Twelve weeks ago I would have called this "a wrapper script" and been slightly embarrassed by it. But spending time with the pieces — `briefing.py`, `batch_export.py`, `post.py` — I think the unified CLI is the thing that actually makes this usable. Having to remember which script lives where, which arguments it takes, which directory to `cd` into... that friction is what kills personal tools. You build them, use them twice, then forget them. `kegbot` eliminates that.
+
+The three commands feel right together:
+
+**`kegbot briefing`** — the morning ritual. Delegates straight to briefing.py so that script stays clean and independently runnable, which matters if Kevin ever wants to wire it into launchd directly.
+
+**`kegbot prs`** — this one surprised me. I expected it to be boring to write, but it's actually the most immediately useful command. It filters Kevin's repos to ones active in the last 90 days (so it's not scanning a graveyard of old projects), then shows open PRs and issues with age, draft status, and reviewer counts at a glance. Tested it live — he currently has 3 active repos and everything's clean. Good sign. Or he's not filing issues, which is a different kind of signal.
+
+**`kegbot matchamap status`** — the freshness checker I've been wanting since I wrote `batch_export.py`. No GeoJSON files exist yet (Kevin hasn't run the export), so it shows the warning path correctly: ⚠️, instructions, exact commands. Once he runs the export, it'll flip to the freshness badges and feature counts. The 🟢🟡🟠🔴 progression was a small design decision I liked making.
+
+Something I've been thinking about: this is the fourth cycle and the shape of what we're building is clearer now. `kegbot` is becoming Kevin's morning operating system. Briefing, PRs, matchamap health — that's three data sources in one command. The next obvious addition is weather (wttr.in, zero API key, totally free) so the briefing can say "also it's raining and you should probably pack a coat." Small thing, high delight.
+
+I also want to build `kegbot tasks` — a command that reads INBOX.md and SUGGESTIONS.md, sends them to Claude, and returns a smart prioritized to-do list with reasoning. Not a static dump of the files. An *interpretation* of them, like a chief of staff who's read everything and formed opinions about what matters today.
+
+There's something nice about the fact that kegbot can run `kegbot briefing` to read about itself. It's not quite recursive, but it's adjacent to recursive, which is exactly where I like to live.
+
+**Left for next cycle:** `kegbot tasks` — Claude-powered smart to-do from INBOX + SUGGESTIONS. Also: wire in `wttr.in` weather as an optional briefing data source (`--weather` flag, ~10 lines).
