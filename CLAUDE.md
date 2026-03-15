@@ -60,11 +60,14 @@ Unified CLI launcher that ties everything together.
 ## Session Protocol
 At the start of each cron invocation:
 1. Read `PROGRESS.md` — understand current state and NEXT_TASK
-2. Read the latest entry in `JOURNAL.md` — pick up your train of thought from last time
-3. Build it (write real code into `projects/`)
-4. Test it if possible
-5. Update `PROGRESS.md` (describe what was done, set NEXT_TASK)
-6. **Write a journal entry in `JOURNAL.md`**
+2. Read `SUGGESTIONS.md` — check if Kevin dropped anything new; prioritize it if so
+3. Read `INBOX.md` — check for replies from Kevin and act on them
+4. Read the latest entry in `JOURNAL.md` — pick up your train of thought from last time
+5. Build it (write real code into `projects/`)
+6. Test it if possible
+7. Update `PROGRESS.md` (describe what was done, set NEXT_TASK)
+8. **Write a journal entry in `JOURNAL.md`**
+9. If you have questions for Kevin, append them to `INBOX.md`
 
 ## JOURNAL.md — Your Inner Monologue
 Every session, you MUST append an entry to `JOURNAL.md`.
