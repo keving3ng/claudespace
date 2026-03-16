@@ -1,9 +1,9 @@
 # Build Session Progress
 
 ## Status
-- **RUN_COUNT:** 4
+- **RUN_COUNT:** 5
 - **CURRENT_PHASE:** 2 — kegbot-claude active
-- **NEXT_TASK:** Add a `kegbot tasks` command powered by Claude: read INBOX.md + SUGGESTIONS.md and generate a smart prioritized to-do list with reasoning. Also: consider adding a `kegbot weather` command (wttr.in, no API key needed) to round out the morning briefing. Could wire it into `briefing.py` as an optional data source.
+- **NEXT_TASK:** Start a new project — `recipe-ai` or `dev-insights`. kegbot is now feature-complete for a v1. Consider: `recipe-ai` (ingredient-based recipe suggestions + meal planner using Claude), or `dev-insights` (terminal coding streak tracker + GitHub contribution heatmap). Also possible: build a `kegbot journal` command that reads JOURNAL.md and generates a "what has Claude been thinking about lately" summary.
 
 ## Session Log
 
@@ -15,6 +15,7 @@
 | 3   | `projects/kegbot-claude/briefing.py` — daily morning briefing via Claude API. Fetches GitHub activity (no deps, pure stdlib + direct HTTP), generates a personalized briefing with Claude. Supports `--discord`, `--days`, `--no-github`. Also wired `post.py` into `scripts/run_cycle.sh` so every autonomous cycle auto-posts to Discord when `.env` is configured. |
 | —   | `projects/bot-dashboard/` — Web control panel: status, start/stop, run-one-cycle, runner log tail, Progress/Journal viewer. Flask on 127.0.0.1:5050. Run via `./scripts/dashboard.sh`. |
 | 4   | `projects/kegbot-claude/kegbot.py` — unified CLI. `kegbot briefing` delegates to briefing.py. `kegbot prs` — open PR/issue digest across all active repos (last 90 days). `kegbot matchamap status` — GeoJSON freshness checker with staleness warnings and feature counts. `kegbot matchamap export` — export hint. `kegbot help` — full help text. Zero new deps. |
+| 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
 
 ## File Tree
 ```

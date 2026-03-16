@@ -18,6 +18,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -118,10 +119,32 @@ def summarize_events(events: list[dict]) -> str:
     return "\n".join(lines[:15])  # cap for context window sanity
 
 
+# ─── Weather ──────────────────────────────────────────────────────────────────
+
+
+def fetch_weather_summary(location: str = "Toronto") -> str:
+    """Fetch a compact weather string from wttr.in (no API key needed)."""
+    encoded = urllib.parse.quote(location)
+    url = f"https://wttr.in/{encoded}?format=j1"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "kegbot-claude/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read())
+        current = data["current_condition"][0]
+        desc = current["weatherDesc"][0]["value"]
+        temp_c = current["temp_C"]
+        feels_c = current["FeelsLikeC"]
+        wind_kmph = current["windspeedKmph"]
+        return f"{desc}, {temp_c}°C (feels like {feels_c}°C), wind {wind_kmph} km/h"
+    except Exception as e:
+        print(f"[weather] Could not fetch: {e}", file=sys.stderr)
+        return ""
+
+
 # ─── Claude API ───────────────────────────────────────────────────────────────
 
 
-def generate_briefing(github_summary: str, days: int) -> str:
+def generate_briefing(github_summary: str, days: int, weather_summary: str = "") -> str:
     """Call Claude API to generate the morning briefing."""
     if not ANTHROPIC_API_KEY:
         return (
@@ -130,6 +153,10 @@ def generate_briefing(github_summary: str, days: int) -> str:
         )
 
     today = datetime.now().strftime("%A, %B %d, %Y")
+
+    weather_section = (
+        f"\nCurrent weather in Toronto: {weather_summary}\n" if weather_summary else ""
+    )
 
     prompt = f"""You are kegbot, Kevin Geng's personal assistant. Generate a warm, sharp morning briefing.
 
@@ -140,7 +167,7 @@ Kevin is:
 - Into cooking, personal automation, Discord bots, and ML/AI
 - Pragmatic, likes things that are both fun AND useful
 
-Today is {today}.
+Today is {today}.{weather_section}
 
 His GitHub activity in the last {days} day(s):
 {github_summary}
@@ -150,8 +177,9 @@ Write a morning briefing that:
 2. In 2–3 sentences, reflects back what he's been building — show you noticed
 3. Suggests ONE concrete small thing he could do today (specific, actionable, based on his activity)
 4. Closes in 1 sentence — genuine, not a cheerleader
+{("5. Weave in the weather naturally — one sentence, only if it's relevant or funny (e.g. bad weather = good day to stay in and code)" if weather_summary else "")}
 
-Constraints: under 180 words total. Use markdown. Be real. If there's no GitHub activity, be honest about it and make it interesting anyway."""
+Constraints: under 200 words total. Use markdown. Be real. If there's no GitHub activity, be honest about it and make it interesting anyway."""
 
     payload = json.dumps({
         "model": "claude-opus-4-6",
@@ -210,6 +238,8 @@ def main() -> int:
     parser.add_argument("--days", type=int, default=2, help="Days of GitHub history (default: 2)")
     parser.add_argument("--no-github", dest="no_github", action="store_true", help="Skip GitHub fetch")
     parser.add_argument("--username", default=GITHUB_USERNAME, help="GitHub username")
+    parser.add_argument("--weather", action="store_true", help="Include current weather in briefing")
+    parser.add_argument("--location", default="Toronto", help="Weather location (default: Toronto)")
     args = parser.parse_args()
 
     print("🍵 kegbot-claude — morning briefing\n")
@@ -223,18 +253,27 @@ def main() -> int:
         events = fetch_github_events(args.username, days=args.days)
         event_count = len(events)
         github_summary = summarize_events(events)
-        print(f"[github] {event_count} event(s) found.\n")
+        print(f"[github] {event_count} event(s) found.")
 
-    # 2. Generate briefing
+    # 2. Weather (optional)
+    weather_summary = ""
+    if args.weather:
+        print(f"[weather] Fetching for {args.location}...")
+        weather_summary = fetch_weather_summary(args.location)
+        if weather_summary:
+            print(f"[weather] {weather_summary}")
+    print()
+
+    # 3. Generate briefing
     print("[claude] Generating briefing...")
-    briefing = generate_briefing(github_summary, days=args.days)
+    briefing = generate_briefing(github_summary, days=args.days, weather_summary=weather_summary)
 
-    # 3. Print
+    # 4. Print
     print("\n" + "─" * 60)
     print(briefing)
     print("─" * 60 + "\n")
 
-    # 4. Discord
+    # 5. Discord
     if args.discord:
         print("[discord] Posting...")
         post_to_discord(f"☀️ **Morning Briefing**\n\n{briefing}")

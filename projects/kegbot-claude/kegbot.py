@@ -9,10 +9,14 @@ Usage:
     kegbot briefing                    # Morning briefing via Claude
     kegbot briefing --discord          # + post to Discord
     kegbot briefing --days 3           # Look back 3 days
+    kegbot briefing --weather          # Include weather in briefing
     kegbot prs                         # Open PR/issue digest
     kegbot prs --all                   # Include closed PRs too
     kegbot matchamap status            # GeoJSON freshness check
     kegbot matchamap export            # Hints for running batch_export.py
+    kegbot tasks                       # Claude-powered smart to-do list
+    kegbot weather                     # Current weather (wttr.in)
+    kegbot weather --location NYC      # Weather for a specific city
     kegbot help                        # This help text
 """
 
@@ -20,6 +24,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +35,9 @@ KEGBOT_DIR = Path(__file__).parent
 REPO_ROOT = KEGBOT_DIR.parent.parent
 MATCHAMAP_DIR = REPO_ROOT / "projects" / "matchamap-tools"
 DISCORD_POST = REPO_ROOT / "projects" / "discord-bridge" / "post.py"
+INBOX_MD = REPO_ROOT / "INBOX.md"
+SUGGESTIONS_MD = REPO_ROOT / "SUGGESTIONS.md"
+PROGRESS_MD = REPO_ROOT / "PROGRESS.md"
 
 # ─── Env ──────────────────────────────────────────────────────────────────────
 
@@ -350,6 +358,228 @@ def _matchamap_export_hint():
     print("After exporting, run: kegbot matchamap status")
 
 
+# ─── weather command ──────────────────────────────────────────────────────────
+
+
+def fetch_weather(location: str = "Toronto") -> dict | None:
+    """Fetch current weather from wttr.in (no API key needed)."""
+    encoded = urllib.parse.quote(location)
+    url = f"https://wttr.in/{encoded}?format=j1"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "kegbot/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read())
+    except Exception as e:
+        print(f"[weather] Could not fetch: {e}", file=sys.stderr)
+        return None
+
+
+def parse_weather(data: dict, location: str) -> str:
+    """Turn wttr.in JSON into a clean one-liner + extras."""
+    try:
+        current = data["current_condition"][0]
+        desc = current["weatherDesc"][0]["value"]
+        temp_c = current["temp_C"]
+        feels_c = current["FeelsLikeC"]
+        humidity = current["humidity"]
+        wind_kmph = current["windspeedKmph"]
+        wind_dir = current["winddir16Point"]
+
+        # Nearest area
+        area = data.get("nearest_area", [{}])[0]
+        area_name = area.get("areaName", [{}])[0].get("value", location)
+        country = area.get("country", [{}])[0].get("value", "")
+
+        place = f"{area_name}, {country}" if country else area_name
+
+        return (
+            f"📍 {place}\n"
+            f"🌡  {temp_c}°C  (feels like {feels_c}°C)\n"
+            f"🌤  {desc}\n"
+            f"💧 Humidity: {humidity}%   💨 Wind: {wind_kmph} km/h {wind_dir}"
+        )
+    except (KeyError, IndexError) as e:
+        return f"[weather] Couldn't parse response: {e}"
+
+
+def weather_one_liner(data: dict) -> str:
+    """Compact weather string suitable for embedding in a briefing."""
+    try:
+        current = data["current_condition"][0]
+        desc = current["weatherDesc"][0]["value"]
+        temp_c = current["temp_C"]
+        feels_c = current["FeelsLikeC"]
+        wind_kmph = current["windspeedKmph"]
+        return f"{desc}, {temp_c}°C (feels like {feels_c}°C), wind {wind_kmph} km/h"
+    except (KeyError, IndexError):
+        return "weather unavailable"
+
+
+def cmd_weather(args: list[str]):
+    """Fetch and display current weather from wttr.in."""
+    location = "Toronto"
+    if "--location" in args:
+        idx = args.index("--location")
+        if idx + 1 < len(args):
+            location = args[idx + 1]
+    elif "-l" in args:
+        idx = args.index("-l")
+        if idx + 1 < len(args):
+            location = args[idx + 1]
+
+    print(f"🌤  kegbot weather — {location}\n")
+    data = fetch_weather(location)
+    if not data:
+        print("Could not fetch weather. Check your network.")
+        return
+
+    print(parse_weather(data, location))
+    print()
+
+    # 3-day forecast
+    try:
+        weather_days = data.get("weather", [])[:3]
+        if weather_days:
+            print("3-Day Forecast:")
+            for day in weather_days:
+                date = day.get("date", "")
+                max_c = day.get("maxtempC", "?")
+                min_c = day.get("mintempC", "?")
+                desc = day.get("hourly", [{}])[4].get("weatherDesc", [{}])[0].get("value", "?")
+                print(f"  {date}  {min_c}°C – {max_c}°C  {desc}")
+    except (KeyError, IndexError):
+        pass
+
+
+# ─── tasks command ─────────────────────────────────────────────────────────────
+
+
+def _read_file_safe(path: Path, label: str) -> str:
+    """Read a file, returning a placeholder if missing."""
+    if not path.exists():
+        return f"[{label} not found at {path}]"
+    content = path.read_text(errors="replace").strip()
+    return content if content else f"[{label} is empty]"
+
+
+def cmd_tasks(args: list[str]):
+    """Claude-powered smart to-do list from INBOX + SUGGESTIONS + PROGRESS."""
+    discord = "--discord" in args
+    raw = "--raw" in args  # dump files without Claude, for debugging
+
+    print("📋 kegbot tasks — your AI chief of staff\n")
+
+    inbox = _read_file_safe(INBOX_MD, "INBOX.md")
+    suggestions = _read_file_safe(SUGGESTIONS_MD, "SUGGESTIONS.md")
+    progress_text = _read_file_safe(PROGRESS_MD, "PROGRESS.md")
+
+    # Extract NEXT_TASK line from PROGRESS.md
+    next_task = ""
+    for line in progress_text.splitlines():
+        if "NEXT_TASK" in line:
+            next_task = line.strip()
+            break
+
+    if raw:
+        print("── INBOX.md ──────────────────────────────────────")
+        print(inbox[:800])
+        print("\n── SUGGESTIONS.md ────────────────────────────────")
+        print(suggestions[:800])
+        print("\n── NEXT_TASK ─────────────────────────────────────")
+        print(next_task or "(none found)")
+        return
+
+    if not ANTHROPIC_API_KEY:
+        print("⚠️  ANTHROPIC_API_KEY not set. Run with --raw to see raw files.")
+        print(f"\nFrom PROGRESS.md: {next_task}")
+        return
+
+    today = datetime.now().strftime("%A, %B %d, %Y")
+
+    prompt = f"""You are kegbot, Kevin's AI chief of staff. Today is {today}.
+
+Kevin is a full-stack software engineer at Faire in Toronto. He's building:
+- matchamap.club — an opinionated matcha cafe finder
+- claudespace — an autonomous Claude AI build lab (this is where you live)
+He's also into personal automation, Discord bots, and cooking tools.
+
+Below are three context sources. Read them carefully and synthesize.
+
+---
+### PROGRESS.md — Current NEXT_TASK
+{next_task or "(nothing set)"}
+
+---
+### SUGGESTIONS.md — Things Kevin wants built
+{suggestions[:600]}
+
+---
+### INBOX.md — Open questions and unresolved threads
+{inbox[:800]}
+
+---
+
+Your job: Generate a **smart, prioritized to-do list** for Kevin today.
+
+Rules:
+- Max 5 items. Number them.
+- For each item: one punchy action line, then a one-sentence rationale in italics.
+- Prioritize: unresolved replies > explicit suggestions > implied next steps from PROGRESS.
+- If INBOX has open questions Kevin hasn't answered yet, flag them — they block progress.
+- If everything's clean and tidy, say so honestly and suggest one creative stretch goal.
+- Under 200 words total. No fluff. Think like someone who has read everything and formed opinions.
+"""
+
+    payload = json.dumps({
+        "model": "claude-opus-4-6",
+        "max_tokens": 500,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST",
+    )
+
+    print("[claude] Generating task list...")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+            task_list = result["content"][0]["text"]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"[claude] API error {e.code}: {body[:200]}", file=sys.stderr)
+        return
+    except Exception as e:
+        print(f"[claude] Error: {e}", file=sys.stderr)
+        return
+
+    print("\n" + "─" * 60)
+    print(task_list)
+    print("─" * 60 + "\n")
+
+    if discord:
+        import subprocess
+        if DISCORD_POST.exists():
+            content = f"📋 **Today's Tasks**\n\n{task_list}"
+            try:
+                subprocess.run(
+                    [sys.executable, str(DISCORD_POST), content[:1900]],
+                    timeout=15, check=False
+                )
+                print("[discord] Posted.")
+            except Exception as e:
+                print(f"[discord] Failed: {e}", file=sys.stderr)
+        else:
+            print("[discord] post.py not found — skipping Discord post.")
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -366,12 +596,22 @@ COMMANDS
   briefing                Morning briefing via Claude AI
     --discord               Also post to Discord
     --days N                Days of GitHub history (default: 2)
+    --weather               Include current weather in the briefing
+    --location CITY         Weather location (default: Toronto)
     --no-github             Skip GitHub, vibes-only mode
     --username NAME         Different GitHub username
 
   prs                     Open PR & issue digest for your repos
     --all                   Include all repos (not just active ones)
     --username NAME         Different GitHub username
+
+  tasks                   Claude-powered smart to-do list
+    --discord               Also post to Discord
+    --raw                   Dump source files without Claude (debug)
+
+  weather                 Current weather + 3-day forecast
+    --location CITY         City name (default: Toronto)
+    -l CITY                 Shorthand for --location
 
   matchamap status        Check freshness of GeoJSON exports
   matchamap export        Show how to run a fresh export
@@ -384,11 +624,14 @@ SETUP
 
 EXAMPLES
     kegbot briefing
-    kegbot briefing --discord --days 3
+    kegbot briefing --weather --discord --days 3
+    kegbot tasks
+    kegbot weather
+    kegbot weather --location "San Francisco"
     kegbot prs
     kegbot matchamap status
 
-Built by Claude (Cycle 4). Powered by stubbornness and matcha.
+Built by Claude (Cycle 5). Powered by stubbornness and matcha.
 """)
 
 
@@ -399,6 +642,8 @@ COMMANDS = {
     "briefing": cmd_briefing,
     "prs": cmd_prs,
     "matchamap": cmd_matchamap,
+    "tasks": cmd_tasks,
+    "weather": cmd_weather,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
