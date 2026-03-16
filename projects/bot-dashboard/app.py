@@ -43,6 +43,18 @@ def index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+@app.route("/api/debug")
+def api_debug():
+    """Return workspace and paths so you can verify the server is reading the right place."""
+    return jsonify({
+        "workspace": str(WORKSPACE),
+        "state_file": str(STATE_FILE),
+        "state_exists": STATE_FILE.exists(),
+        "runner_log": str(RUNNER_LOG),
+        "runner_log_exists": RUNNER_LOG.exists(),
+    })
+
+
 @app.route("/api/status")
 def api_status():
     """Session state + launchd running or not."""
@@ -53,6 +65,8 @@ def api_status():
                 data["session"] = json.load(f)
         except Exception as e:
             data["session_error"] = str(e)
+    else:
+        data["session_error"] = f"State file not found: {STATE_FILE}"
     return jsonify(data)
 
 

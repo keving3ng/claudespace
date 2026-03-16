@@ -244,6 +244,16 @@
     const API = '';
     let refreshTimer = null;
 
+    // If opened as file://, API calls will fail — tell user to use the server URL
+    if (window.location.protocol === 'file:') {
+      document.body.innerHTML = '<main style="padding: 2rem; max-width: 500px; margin: 0 auto;">' +
+        '<h2 style="color: var(--red);">Wrong URL</h2>' +
+        '<p>This page was opened as a file. The dashboard must be served by the Flask app.</p>' +
+        '<p>Start the server: <code style="background: var(--surface); padding: 0.2rem 0.5rem;">./scripts/dashboard.sh</code></p>' +
+        '<p>Then open: <a href="http://127.0.0.1:5050/" style="color: var(--accent);">http://127.0.0.1:5050/</a></p>' +
+        '</main>';
+    }
+
     function showToast(msg, type = 'success') {
       const el = document.getElementById('toast');
       el.textContent = msg;
@@ -254,44 +264,65 @@
     }
 
     async function fetchStatus() {
-      const r = await fetch(API + '/api/status');
-      const data = await r.json();
       const badge = document.getElementById('launchd-badge');
-      badge.textContent = data.launchd_running ? '● RUNNING' : '○ Stopped';
-      badge.classList.toggle('running', data.launchd_running);
-      badge.classList.toggle('stopped', !data.launchd_running);
+      if (!badge) return;
+      try {
+        const r = await fetch(API + '/api/status');
+        if (!r.ok) {
+          badge.textContent = 'API error ' + r.status;
+          badge.classList.add('stopped');
+          document.getElementById('session-state').textContent = 'Server error — check terminal';
+          return;
+        }
+        const data = await r.json();
+        badge.textContent = data.launchd_running ? '● RUNNING' : '○ Stopped';
+        badge.classList.toggle('running', data.launchd_running);
+        badge.classList.toggle('stopped', !data.launchd_running);
 
-      const s = data.session;
-      const grid = document.getElementById('status-grid');
-      if (!s) {
-        document.getElementById('session-state').textContent = 'No session';
-        document.getElementById('runs').textContent = '—';
-        document.getElementById('interval').textContent = '—';
-        document.getElementById('last-run').textContent = '—';
-        document.getElementById('progress-fill').style.width = '0%';
-        return;
+        const s = data.session;
+        if (!s) {
+          document.getElementById('session-state').textContent = data.session_error ? 'No session' : 'No session';
+          document.getElementById('runs').textContent = '—';
+          document.getElementById('interval').textContent = '—';
+          document.getElementById('last-run').textContent = '—';
+          document.getElementById('progress-fill').style.width = '0%';
+          if (data.session_error) console.warn('Session:', data.session_error);
+          return;
+        }
+
+        const done = s.cycles_total - s.cycles_remaining;
+        const pct = s.cycles_total > 0 ? Math.round((done / s.cycles_total) * 100) : 0;
+        document.getElementById('progress-fill').style.width = pct + '%';
+        document.getElementById('session-state').textContent = s.session_id ? s.session_id.slice(0, 8) + '…' : 'Active';
+        document.getElementById('runs').textContent = done + ' / ' + s.cycles_total;
+        document.getElementById('interval').textContent = (s.interval_seconds / 60) + ' min';
+        document.getElementById('last-run').textContent = s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Not yet';
+      } catch (e) {
+        badge.textContent = 'No server';
+        badge.classList.add('stopped');
+        document.getElementById('session-state').textContent = 'Can\'t reach dashboard — run ./scripts/dashboard.sh';
+        console.error('fetchStatus failed:', e);
       }
-
-      const done = s.cycles_total - s.cycles_remaining;
-      const pct = s.cycles_total > 0 ? Math.round((done / s.cycles_total) * 100) : 0;
-      document.getElementById('progress-fill').style.width = pct + '%';
-      document.getElementById('session-state').textContent = s.session_id ? s.session_id.slice(0, 8) + '…' : 'Active';
-      document.getElementById('runs').textContent = done + ' / ' + s.cycles_total;
-      document.getElementById('interval').textContent = (s.interval_seconds / 60) + ' min';
-      document.getElementById('last-run').textContent = s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Not yet';
     }
 
     async function fetchLogs() {
-      const n = document.getElementById('log-lines').value || 200;
-      const r = await fetch(API + '/api/logs?n=' + n);
-      const data = await r.json();
       const box = document.getElementById('log-box');
-      if (data.error) {
-        box.textContent = 'Error: ' + data.error;
-        return;
+      if (!box) return;
+      try {
+        const n = document.getElementById('log-lines').value || 200;
+        const r = await fetch(API + '/api/logs?n=' + n);
+        const data = await r.json();
+        if (data.error) {
+          box.textContent = 'Error: ' + data.error;
+          return;
+        }
+        box.innerHTML = (data.lines && data.lines.length)
+          ? data.lines.map(l => '<span class="line">' + escapeHtml(l) + '</span>').join('')
+          : '(No log yet — runner.log is empty or path is wrong)';
+        box.scrollTop = box.scrollHeight;
+      } catch (e) {
+        box.textContent = 'Could not load logs. Is the dashboard server running at http://127.0.0.1:5050 ?';
       }
-      box.innerHTML = data.lines.map(l => '<span class="line">' + escapeHtml(l) + '</span>').join('');
-      box.scrollTop = box.scrollHeight;
     }
 
     async function fetchProgress() {
