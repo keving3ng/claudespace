@@ -26,12 +26,15 @@ Two scripts:
 
 1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
 2. Click **New Application** → name it something like `claudespace` or `kegbot-relay`
-3. Go to **Bot** (left sidebar) → click **Add Bot** → confirm
+3. In the left sidebar, click **Bot**
+4. Click **Add Bot** (or **Create Bot**) and confirm
 
 ### Step 2 — Get your Bot Token
 
-1. Still on the **Bot** page → click **Reset Token** → copy it
-2. Save this as `DISCORD_BOT_TOKEN` in your `.env`
+Discord shows the token **only once** for security. Copy it immediately and put it in your `.env`.
+
+- **Right after adding the bot:** The page often shows the token with a **Copy** button. Click **Copy** and save it as `DISCORD_BOT_TOKEN` in your `.env`.
+- **If you don’t see the token** (e.g. you already had a bot or left the page): Click **Reset Token**. Complete any 2FA if asked, then click **Copy** when the new token appears. Save it as `DISCORD_BOT_TOKEN`. (Resetting invalidates the previous token, so update your `.env` and any running bot.)
 
 **Enable Privileged Intents** (required to read message content):
 - On the Bot page, scroll down to **Privileged Gateway Intents**

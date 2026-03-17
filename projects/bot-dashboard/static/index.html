@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <title>Claude Builder — Control Panel</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,11 +86,7 @@
       overflow: hidden;
       margin: 0.5rem 0 1rem 0;
     }
-    .progress-bar fill {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent-dim), var(--accent));
-      border-radius: 4px;
+    #progress-fill {
       transition: width 0.3s ease;
     }
     .running { color: var(--green); }
@@ -197,14 +194,15 @@
 <body>
   <header>
     <h1>Claude Builder — Control Panel</h1>
-    <span class="badge mono" id="launchd-badge">—</span>
+    <span class="badge mono" id="launchd-badge">Loading…</span>
+    <span class="badge" style="font-size:0.7rem;opacity:0.7" id="version-hint">v2</span>
   </header>
   <main>
     <section>
       <h2>Status</h2>
-      <div class="progress-bar" id="progress-bar"><fill id="progress-fill" style="width: 0%"></fill></div>
+      <div class="progress-bar" id="progress-bar"><span id="progress-fill" style="display:block;height:100%;width:0%;background:linear-gradient(90deg, var(--accent-dim), var(--accent));border-radius:4px;"></span></div>
       <div class="status-grid" id="status-grid">
-        <div class="status-item"><div class="label">Session</div><div class="value" id="session-state">—</div></div>
+        <div class="status-item"><div class="label">Session</div><div class="value" id="session-state">Loading…</div></div>
         <div class="status-item"><div class="label">Runs</div><div class="value" id="runs">—</div></div>
         <div class="status-item"><div class="label">Interval</div><div class="value" id="interval">—</div></div>
         <div class="status-item"><div class="label">Last run</div><div class="value" id="last-run">—</div></div>
@@ -217,9 +215,54 @@
     </section>
 
     <section>
+      <h2>Discord Bridge</h2>
+      <div class="status-grid" style="margin-bottom: 0.75rem;">
+        <div class="status-item">
+          <div class="label">Bridge</div>
+          <div class="value"><span class="badge mono" id="discord-badge">Loading…</span></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="btn-discord-start">Start bridge</button>
+        <button class="danger" id="btn-discord-stop">Stop bridge</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Kegbot</h2>
+      <div class="status-grid" style="margin-bottom: 0.75rem;">
+        <div class="status-item">
+          <div class="label">Config</div>
+          <div class="value"><span class="badge mono" id="kegbot-badge">…</span></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btn-kegbot-briefing">Briefing</button>
+        <button id="btn-kegbot-prs">PR digest</button>
+        <button id="btn-kegbot-matchamap-status">Matchamap status</button>
+        <button id="btn-kegbot-tasks">Tasks</button>
+        <button id="btn-kegbot-weather">Weather</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Matchamap tools</h2>
+      <div class="actions">
+        <button id="btn-matchamap-quality">Quality report</button>
+        <button id="btn-matchamap-export">Batch export</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Tool output</h2>
+      <div class="log-box" id="tool-output" style="max-height: 280px;">Run a Kegbot or Matchamap command above; output appears here.</div>
+    </section>
+
+    <section>
       <h2>Logs & docs</h2>
       <div class="tabs">
         <button class="tabs-btn active" data-panel="logs">Runner log</button>
+        <button class="tabs-btn" data-panel="discord-log">Discord</button>
         <button class="tabs-btn" data-panel="progress">Progress</button>
         <button class="tabs-btn" data-panel="journal">Journal</button>
       </div>
@@ -229,6 +272,9 @@
       </div>
       <div id="panel-logs" class="panel visible">
         <div class="log-box" id="log-box"></div>
+      </div>
+      <div id="panel-discord-log" class="panel">
+        <div class="log-box" id="discord-log-box"></div>
       </div>
       <div id="panel-progress" class="panel">
         <div class="markdown-panel" id="progress-content"></div>
@@ -263,6 +309,15 @@
       window._toastId = setTimeout(() => { el.style.display = 'none'; }, 4000);
     }
 
+    function setText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    }
+    function setWidth(id, w) {
+      const el = document.getElementById(id);
+      if (el) el.style.width = w;
+    }
+
     async function fetchStatus() {
       const badge = document.getElementById('launchd-badge');
       if (!badge) return;
@@ -271,7 +326,7 @@
         if (!r.ok) {
           badge.textContent = 'API error ' + r.status;
           badge.classList.add('stopped');
-          document.getElementById('session-state').textContent = 'Server error — check terminal';
+          setText('session-state', 'Server error — check terminal');
           return;
         }
         const data = await r.json();
@@ -281,26 +336,26 @@
 
         const s = data.session;
         if (!s) {
-          document.getElementById('session-state').textContent = data.session_error ? 'No session' : 'No session';
-          document.getElementById('runs').textContent = '—';
-          document.getElementById('interval').textContent = '—';
-          document.getElementById('last-run').textContent = '—';
-          document.getElementById('progress-fill').style.width = '0%';
+          setText('session-state', 'No session');
+          setText('runs', '—');
+          setText('interval', '—');
+          setText('last-run', '—');
+          setWidth('progress-fill', '0%');
           if (data.session_error) console.warn('Session:', data.session_error);
           return;
         }
 
         const done = s.cycles_total - s.cycles_remaining;
         const pct = s.cycles_total > 0 ? Math.round((done / s.cycles_total) * 100) : 0;
-        document.getElementById('progress-fill').style.width = pct + '%';
-        document.getElementById('session-state').textContent = s.session_id ? s.session_id.slice(0, 8) + '…' : 'Active';
-        document.getElementById('runs').textContent = done + ' / ' + s.cycles_total;
-        document.getElementById('interval').textContent = (s.interval_seconds / 60) + ' min';
-        document.getElementById('last-run').textContent = s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Not yet';
+        setWidth('progress-fill', pct + '%');
+        setText('session-state', s.session_id ? s.session_id.slice(0, 8) + '…' : 'Active');
+        setText('runs', done + ' / ' + s.cycles_total);
+        setText('interval', (s.interval_seconds / 60) + ' min');
+        setText('last-run', s.last_run_at ? new Date(s.last_run_at).toLocaleString() : 'Not yet');
       } catch (e) {
         badge.textContent = 'No server';
         badge.classList.add('stopped');
-        document.getElementById('session-state').textContent = 'Can\'t reach dashboard — run ./scripts/dashboard.sh';
+        setText('session-state', 'Can\'t reach dashboard — run ./scripts/dashboard.sh');
         console.error('fetchStatus failed:', e);
       }
     }
@@ -326,15 +381,146 @@
     }
 
     async function fetchProgress() {
-      const r = await fetch(API + '/api/progress');
-      const data = await r.json();
-      document.getElementById('progress-content').textContent = data.content || '(empty)';
+      const el = document.getElementById('progress-content');
+      if (!el) return;
+      try {
+        const r = await fetch(API + '/api/progress');
+        const data = await r.json();
+        el.textContent = data.content || '(empty)';
+      } catch (e) {
+        el.textContent = '(Could not load progress)';
+      }
     }
 
     async function fetchJournal() {
-      const r = await fetch(API + '/api/journal');
-      const data = await r.json();
-      document.getElementById('journal-content').textContent = data.content || '(empty)';
+      const el = document.getElementById('journal-content');
+      if (!el) return;
+      try {
+        const r = await fetch(API + '/api/journal');
+        const data = await r.json();
+        el.textContent = data.content || '(empty)';
+      } catch (e) {
+        el.textContent = '(Could not load journal)';
+      }
+    }
+
+    async function fetchDiscordStatus() {
+      const badge = document.getElementById('discord-badge');
+      const btnStart = document.getElementById('btn-discord-start');
+      const btnStop = document.getElementById('btn-discord-stop');
+      if (!badge) return;
+      try {
+        const r = await fetch(API + '/api/discord/status');
+        const data = await r.json();
+        if (data.status === 'not configured') {
+          badge.textContent = 'Not configured';
+          badge.classList.remove('running', 'stopped');
+          if (btnStart) btnStart.disabled = true;
+          if (btnStop) btnStop.disabled = true;
+          return;
+        }
+        badge.textContent = data.running ? '● Running' : '○ Stopped';
+        badge.classList.toggle('running', data.running);
+        badge.classList.toggle('stopped', !data.running);
+        if (btnStart) btnStart.disabled = data.running || !data.configured;
+        if (btnStop) btnStop.disabled = !data.running;
+      } catch (e) {
+        badge.textContent = '—';
+        if (btnStart) btnStart.disabled = false;
+        if (btnStop) btnStop.disabled = false;
+      }
+    }
+
+    async function fetchKegbotConfigured() {
+      const badge = document.getElementById('kegbot-badge');
+      if (!badge) return;
+      try {
+        const r = await fetch(API + '/api/kegbot/configured');
+        const data = await r.json();
+        badge.textContent = data.configured ? 'Configured' : 'Not configured';
+        badge.classList.toggle('running', data.configured);
+        badge.classList.toggle('stopped', !data.configured);
+      } catch (e) {
+        badge.textContent = '—';
+      }
+    }
+
+    function setToolOutput(label, stdout, stderr, err) {
+      const el = document.getElementById('tool-output');
+      if (!el) return;
+      const errStr = err ? err + '\n' : '';
+      const stderrStr = stderr ? stderr + (stderr.endsWith('\n') ? '' : '\n') : '';
+      el.textContent = errStr + (label ? '--- ' + label + ' ---\n' : '') + stdout + (stderrStr ? '\n[stderr]\n' + stderrStr : '');
+      el.scrollTop = el.scrollHeight;
+    }
+
+    async function runKegbot(command, args) {
+      const out = document.getElementById('tool-output');
+      if (out) out.textContent = 'Running ' + command + '…';
+      try {
+        const r = await fetch(API + '/api/kegbot/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: command, args: args || [] }),
+        });
+        const data = await r.json();
+        if (data.error) setToolOutput(command, data.stdout || '', data.stderr || '', data.error);
+        else setToolOutput(command, data.stdout || '', data.stderr || '');
+        if (data.ok) showToast(command + ' finished.'); else showToast(command + ' failed.', 'error');
+      } catch (e) {
+        setToolOutput(command, '', '', e.message);
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function runMatchamapQuality() {
+      const out = document.getElementById('tool-output');
+      if (out) out.textContent = 'Running quality report…';
+      try {
+        const r = await fetch(API + '/api/matchamap/quality-report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await r.json();
+        if (data.error) setToolOutput('Quality report', data.stdout || '', data.stderr || '', data.error);
+        else setToolOutput('Quality report', data.stdout || '', data.stderr || '');
+        if (data.ok) showToast('Quality report done.'); else showToast('Quality report failed.', 'error');
+      } catch (e) {
+        setToolOutput('Quality report', '', '', e.message);
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function runMatchamapExport() {
+      const out = document.getElementById('tool-output');
+      if (out) out.textContent = 'Running batch export (may take a few minutes)…';
+      try {
+        const r = await fetch(API + '/api/matchamap/batch-export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const data = await r.json();
+        if (data.error) setToolOutput('Batch export', data.stdout || '', data.stderr || '', data.error);
+        else setToolOutput('Batch export', data.stdout || '', data.stderr || '');
+        if (data.ok) showToast('Batch export done.'); else showToast('Batch export failed.', 'error');
+      } catch (e) {
+        setToolOutput('Batch export', '', '', e.message);
+        showToast(e.message, 'error');
+      }
+    }
+
+    async function fetchDiscordLogs() {
+      const box = document.getElementById('discord-log-box');
+      if (!box) return;
+      try {
+        const n = document.getElementById('log-lines') ? document.getElementById('log-lines').value || 200 : 200;
+        const r = await fetch(API + '/api/discord/logs?n=' + n);
+        const data = await r.json();
+        if (data.error) {
+          box.textContent = 'Error: ' + data.error;
+          return;
+        }
+        box.innerHTML = (data.lines && data.lines.length)
+          ? data.lines.map(l => '<span class="line">' + escapeHtml(l) + '</span>').join('')
+          : '(No Discord bridge log yet)';
+        box.scrollTop = box.scrollHeight;
+      } catch (e) {
+        box.textContent = 'Could not load Discord logs.';
+      }
     }
 
     function escapeHtml(s) {
@@ -346,15 +532,18 @@
     function refreshVisible() {
       const active = document.querySelector('.tabs-btn.active');
       if (active && active.dataset.panel === 'logs') fetchLogs();
+      if (active && active.dataset.panel === 'discord-log') fetchDiscordLogs();
       if (active && active.dataset.panel === 'progress') fetchProgress();
       if (active && active.dataset.panel === 'journal') fetchJournal();
     }
 
     function startRefresh() {
       fetchStatus();
+      fetchDiscordStatus();
+      fetchKegbotConfigured();
       refreshVisible();
       if (document.getElementById('auto-refresh').checked) {
-        refreshTimer = setInterval(() => { fetchStatus(); refreshVisible(); }, 10000);
+        refreshTimer = setInterval(() => { fetchStatus(); fetchDiscordStatus(); fetchKegbotConfigured(); refreshVisible(); }, 10000);
       }
     }
 
@@ -372,6 +561,7 @@
         if (panel) panel.classList.add('visible');
         if (btn.dataset.panel === 'progress') fetchProgress();
         if (btn.dataset.panel === 'journal') fetchJournal();
+        if (btn.dataset.panel === 'discord-log') fetchDiscordLogs();
       });
     });
 
@@ -406,12 +596,49 @@
       try {
         const r = await fetch(API + '/api/run-now', { method: 'POST' });
         const data = await r.json();
-        if (data.ok) { showToast('Cycle started in background.'); fetchStatus(); } else showToast(data.error || 'Failed', 'error'); }
+        if (data.ok) { showToast('Cycle started in background.'); fetchStatus(); } else showToast(data.error || 'Failed', 'error');
       } catch (e) { showToast(e.message, 'error'); }
       document.getElementById('btn-run-now').disabled = false;
     });
 
-    startRefresh();
+    document.getElementById('btn-discord-start').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-discord-start');
+      if (btn) btn.disabled = true;
+      try {
+        const r = await fetch(API + '/api/discord/start', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) { showToast(data.message || 'Discord bridge started.'); fetchDiscordStatus(); } else showToast(data.error || data.stderr || 'Start failed', 'error');
+      } catch (e) { showToast(e.message, 'error'); }
+      if (btn) btn.disabled = false;
+      fetchDiscordStatus();
+    });
+
+    document.getElementById('btn-discord-stop').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-discord-stop');
+      if (btn) btn.disabled = true;
+      try {
+        const r = await fetch(API + '/api/discord/stop', { method: 'POST' });
+        const data = await r.json();
+        if (data.ok) { showToast(data.message || 'Discord bridge stopped.'); fetchDiscordStatus(); } else showToast(data.error || data.stderr || 'Stop failed', 'error');
+      } catch (e) { showToast(e.message, 'error'); }
+      if (btn) btn.disabled = false;
+      fetchDiscordStatus();
+    });
+
+    document.getElementById('btn-kegbot-briefing').addEventListener('click', () => runKegbot('briefing', []));
+    document.getElementById('btn-kegbot-prs').addEventListener('click', () => runKegbot('prs', []));
+    document.getElementById('btn-kegbot-matchamap-status').addEventListener('click', () => runKegbot('matchamap status', []));
+    document.getElementById('btn-kegbot-tasks').addEventListener('click', () => runKegbot('tasks', []));
+    document.getElementById('btn-kegbot-weather').addEventListener('click', () => runKegbot('weather', []));
+    document.getElementById('btn-matchamap-quality').addEventListener('click', runMatchamapQuality);
+    document.getElementById('btn-matchamap-export').addEventListener('click', runMatchamapExport);
+
+    // Start after DOM is ready so status elements exist
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startRefresh);
+    } else {
+      startRefresh();
+    }
   </script>
 </body>
 </html>

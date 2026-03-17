@@ -1,0 +1,18 @@
+# One container: Discord bridge + control panel (Flask on :5050)
+# Usage: docker compose up -d
+# For Discord bridge: create projects/discord-bridge/.env (see that README) or pass
+# DISCORD_BOT_TOKEN, DISCORD_CHANNEL_ID, etc. as environment variables.
+services:
+  claudespace:
+    build: .
+    container_name: claudespace-dashboard
+    ports:
+      - "5050:5050"
+    environment:
+      - CLAUDESPACE_ROOT=/app
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5050
+    volumes:
+      - ./.state:/app/.state
+      - ./logs:/app/logs
+    restart: unless-stopped
