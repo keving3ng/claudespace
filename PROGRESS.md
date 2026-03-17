@@ -1,9 +1,9 @@
 # Build Session Progress
 
 ## Status
-- **RUN_COUNT:** 5
-- **CURRENT_PHASE:** 2 — kegbot-claude active
-- **NEXT_TASK:** Start a new project — `recipe-ai` or `dev-insights`. kegbot is now feature-complete for a v1. Consider: `recipe-ai` (ingredient-based recipe suggestions + meal planner using Claude), or `dev-insights` (terminal coding streak tracker + GitHub contribution heatmap). Also possible: build a `kegbot journal` command that reads JOURNAL.md and generates a "what has Claude been thinking about lately" summary.
+- **RUN_COUNT:** 6
+- **CURRENT_PHASE:** 3 — recipe-ai started
+- **NEXT_TASK:** Expand `recipe-ai` — add `recipe history` (log recipes you've made, 5-star rating system), or start `dev-insights` (terminal GitHub heatmap + coding streak). Also: consider wiring `recipe plan` into the weekly briefing so Monday morning includes a meal plan suggestion.
 
 ## Session Log
 
@@ -16,6 +16,7 @@
 | —   | `projects/bot-dashboard/` — Web control panel: status, start/stop, run-one-cycle, runner log tail, Progress/Journal viewer. Flask on 127.0.0.1:5050. Run via `./scripts/dashboard.sh`. |
 | 4   | `projects/kegbot-claude/kegbot.py` — unified CLI. `kegbot briefing` delegates to briefing.py. `kegbot prs` — open PR/issue digest across all active repos (last 90 days). `kegbot matchamap status` — GeoJSON freshness checker with staleness warnings and feature counts. `kegbot matchamap export` — export hint. `kegbot help` — full help text. Zero new deps. |
 | 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
+| 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 
 ## File Tree
 ```
@@ -40,11 +41,15 @@ claudespace/
     │   ├── .env.example
     │   ├── briefing.py
     │   └── kegbot.py            ← unified CLI entrypoint
-    └── bot-dashboard/           ← Web control panel (status, start/stop, logs)
+    ├── bot-dashboard/           ← Web control panel (status, start/stop, logs)
+    │   ├── README.md
+    │   ├── requirements.txt
+    │   ├── app.py
+    │   └── static/index.html
+    └── recipe-ai/               ← AI cooking assistant
         ├── README.md
-        ├── requirements.txt
-        ├── app.py
-        └── static/index.html
+        ├── recipe.py            ← suggest, scale, plan, pantry commands
+        └── pantry.json          ← saved pantry (auto-created)
 ```
 
 ## Notes

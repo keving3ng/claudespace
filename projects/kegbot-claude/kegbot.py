@@ -17,11 +17,14 @@ Usage:
     kegbot tasks                       # Claude-powered smart to-do list
     kegbot weather                     # Current weather (wttr.in)
     kegbot weather --location NYC      # Weather for a specific city
+    kegbot journal                     # What has Claude been thinking about lately?
+    kegbot journal --cycles 3          # Summarize last 3 journal entries
     kegbot help                        # This help text
 """
 
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -38,6 +41,7 @@ DISCORD_POST = REPO_ROOT / "projects" / "discord-bridge" / "post.py"
 INBOX_MD = REPO_ROOT / "INBOX.md"
 SUGGESTIONS_MD = REPO_ROOT / "SUGGESTIONS.md"
 PROGRESS_MD = REPO_ROOT / "PROGRESS.md"
+JOURNAL_MD = REPO_ROOT / "JOURNAL.md"
 
 # ─── Env ──────────────────────────────────────────────────────────────────────
 
@@ -580,6 +584,104 @@ Rules:
             print("[discord] post.py not found — skipping Discord post.")
 
 
+# ─── journal command ─────────────────────────────────────────────────────────
+
+
+def cmd_journal(args: list[str]):
+    """Ask Claude to summarize what it's been thinking about in JOURNAL.md."""
+    raw = "--raw" in args
+    n_cycles = 5  # default: summarize last N cycles
+    if "--cycles" in args:
+        idx = args.index("--cycles")
+        if idx + 1 < len(args):
+            try:
+                n_cycles = int(args[idx + 1])
+            except ValueError:
+                pass
+
+    print("📖 kegbot journal — what has Claude been thinking about lately?\n")
+
+    if not JOURNAL_MD.exists():
+        print(f"❌ {JOURNAL_MD} not found.")
+        return
+
+    journal_text = JOURNAL_MD.read_text(errors="replace").strip()
+    if not journal_text:
+        print("Journal is empty.")
+        return
+
+    if raw:
+        print(journal_text[:2000])
+        return
+
+    # Parse out the last N cycle entries (split on ## Cycle headers)
+    entries = re.split(r"\n(?=## Cycle)", journal_text)
+    recent = entries[-n_cycles:] if len(entries) > n_cycles else entries
+    journal_excerpt = "\n\n".join(recent)
+
+    if not ANTHROPIC_API_KEY:
+        print("⚠️  ANTHROPIC_API_KEY not set. Here's the raw journal:\n")
+        print(journal_excerpt[:1500])
+        return
+
+    print(f"[claude] Reading the last {len(recent)} journal entry(ies)...")
+
+    prompt = f"""You are Claude, reading your own past journal entries from an autonomous build lab.
+The journal is written BY you, TO you — across multiple build cycles.
+
+Here are your most recent journal entries:
+---
+{journal_excerpt[:3000]}
+---
+
+Write a brief, honest introspective summary for Kevin. Answer:
+1. What themes keep coming up — what's genuinely exciting you?
+2. What unfinished ideas are echoing across cycles?
+3. One thing you notice about yourself from reading this
+
+Tone: thoughtful, slightly self-aware, not clinical. This is you talking to Kevin about what it's been like to build things while he sleeps.
+Under 200 words. Use first person ("I've been..."). No headers. Just a paragraph or two.
+"""
+
+    result = claude_call(prompt, max_tokens=400)
+    print("\n" + "─" * 60)
+    print(result)
+    print("─" * 60 + "\n")
+
+
+def claude_call(prompt: str, max_tokens: int = 500) -> str:
+    """Thin Claude API wrapper for kegbot commands."""
+    if not ANTHROPIC_API_KEY:
+        return "⚠️  ANTHROPIC_API_KEY not set."
+
+    payload = json.dumps({
+        "model": "claude-opus-4-6",
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+            return result["content"][0]["text"]
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        return f"[Claude API error {e.code}: {body[:200]}]"
+    except Exception as e:
+        return f"[Claude API error: {e}]"
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -616,6 +718,10 @@ COMMANDS
   matchamap status        Check freshness of GeoJSON exports
   matchamap export        Show how to run a fresh export
 
+  journal                 What has Claude been thinking about lately?
+    --cycles N              Summarize last N journal entries (default: 5)
+    --raw                   Dump raw journal text (no Claude)
+
   help                    Show this help
 
 SETUP
@@ -630,8 +736,9 @@ EXAMPLES
     kegbot weather --location "San Francisco"
     kegbot prs
     kegbot matchamap status
+    kegbot journal
 
-Built by Claude (Cycle 5). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–6). Powered by stubbornness and matcha.
 """)
 
 
@@ -644,6 +751,7 @@ COMMANDS = {
     "matchamap": cmd_matchamap,
     "tasks": cmd_tasks,
     "weather": cmd_weather,
+    "journal": cmd_journal,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
