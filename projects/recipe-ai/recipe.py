@@ -3,7 +3,8 @@
 recipe — AI-powered cooking assistant powered by Claude
 
 Ingredient-based recipe suggestions, recipe scaling, weekly meal planning,
-and a simple pantry tracker. Zero runtime dependencies beyond stdlib.
+a pantry tracker, and a recipe history log with 5-star ratings.
+Zero runtime dependencies beyond stdlib.
 
 Usage:
     recipe suggest chicken lemon capers      # instant suggestions
@@ -17,6 +18,11 @@ Usage:
     recipe pantry add chicken eggs lemon     # add ingredients
     recipe pantry remove chicken             # remove an ingredient
     recipe pantry clear                      # start fresh
+    recipe history log "Chicken Piccata" 4  # log a recipe with a star rating
+    recipe history log "Miso Ramen"         # log without rating (unrated)
+    recipe history list                      # see your recipe history
+    recipe history top                       # top-rated recipes
+    recipe history note "Chicken Piccata" "Add more capers next time"
     recipe help                              # this help text
 """
 
@@ -34,6 +40,7 @@ from pathlib import Path
 RECIPE_DIR = Path(__file__).parent
 REPO_ROOT = RECIPE_DIR.parent.parent
 PANTRY_FILE = RECIPE_DIR / "pantry.json"
+HISTORY_FILE = RECIPE_DIR / "history.json"
 
 # ─── Env ──────────────────────────────────────────────────────────────────────
 
@@ -318,6 +325,143 @@ Group ingredients that are used in multiple meals.
     print("─" * 60 + "\n")
 
 
+# ─── history command ──────────────────────────────────────────────────────────
+
+STARS = ["", "★☆☆☆☆", "★★☆☆☆", "★★★☆☆", "★★★★☆", "★★★★★"]
+
+
+def load_history() -> list[dict]:
+    if not HISTORY_FILE.exists():
+        return []
+    try:
+        return json.loads(HISTORY_FILE.read_text()).get("entries", [])
+    except Exception:
+        return []
+
+
+def save_history(entries: list[dict]):
+    HISTORY_FILE.write_text(json.dumps({"entries": entries}, indent=2))
+
+
+def _find_entry(entries: list[dict], name: str) -> int | None:
+    """Return index of most recent entry with matching recipe name (case-insensitive)."""
+    name_lower = name.lower()
+    for i in reversed(range(len(entries))):
+        if entries[i]["recipe"].lower() == name_lower:
+            return i
+    return None
+
+
+def cmd_history(args: list[str]):
+    sub = args[0] if args else "list"
+
+    if sub == "log":
+        # recipe history log "Recipe Name" [1-5]
+        rest = args[1:]
+        if not rest:
+            print("Usage: recipe history log \"Recipe Name\" [1-5 stars]")
+            return
+        # Rating is the last arg if it's a digit 1-5
+        rating = None
+        if rest and rest[-1].isdigit() and 1 <= int(rest[-1]) <= 5:
+            rating = int(rest[-1])
+            rest = rest[:-1]
+        name = " ".join(rest).strip().strip('"').strip("'")
+        if not name:
+            print("Usage: recipe history log \"Recipe Name\" [1-5 stars]")
+            return
+
+        entries = load_history()
+        entry = {
+            "recipe": name,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "rating": rating,
+            "notes": "",
+        }
+        entries.append(entry)
+        save_history(entries)
+        star_str = f"  {STARS[rating]}" if rating else "  (unrated)"
+        print(f"📖 Logged: {name}{star_str}")
+
+    elif sub == "rate":
+        # recipe history rate "Recipe Name" 4
+        if len(args) < 3:
+            print("Usage: recipe history rate \"Recipe Name\" <1-5>")
+            return
+        try:
+            stars = int(args[-1])
+            if not 1 <= stars <= 5:
+                raise ValueError
+        except ValueError:
+            print("Rating must be a number from 1 to 5.")
+            return
+        name = " ".join(args[1:-1]).strip().strip('"').strip("'")
+        entries = load_history()
+        idx = _find_entry(entries, name)
+        if idx is None:
+            print(f"❌ No history entry found for: {name}")
+            print("Run `recipe history list` to see logged recipes.")
+            return
+        entries[idx]["rating"] = stars
+        save_history(entries)
+        print(f"⭐ Rated '{entries[idx]['recipe']}': {STARS[stars]}")
+
+    elif sub == "note":
+        # recipe history note "Recipe Name" "note text"
+        if len(args) < 3:
+            print('Usage: recipe history note "Recipe Name" "your note"')
+            return
+        # Last arg is the note, rest is the recipe name
+        note = args[-1].strip().strip('"').strip("'")
+        name = " ".join(args[1:-1]).strip().strip('"').strip("'")
+        entries = load_history()
+        idx = _find_entry(entries, name)
+        if idx is None:
+            print(f"❌ No history entry found for: {name}")
+            return
+        entries[idx]["notes"] = note
+        save_history(entries)
+        print(f"📝 Note saved for '{entries[idx]['recipe']}'")
+
+    elif sub == "list":
+        entries = load_history()
+        if not entries:
+            print("📖 No recipe history yet.")
+            print("Log a recipe with: recipe history log \"Recipe Name\" [1-5]")
+            return
+        print(f"📖 Recipe History ({len(entries)} entries)\n")
+        for e in reversed(entries[-20:]):  # Most recent first, last 20
+            star_str = STARS[e["rating"]] if e.get("rating") else "·····"
+            note_str = f"  → {e['notes']}" if e.get("notes") else ""
+            print(f"  {e['date']}  {star_str}  {e['recipe']}{note_str}")
+        if len(entries) > 20:
+            print(f"\n  ... and {len(entries) - 20} older entries")
+        print()
+
+    elif sub == "top":
+        entries = load_history()
+        rated = [e for e in entries if e.get("rating")]
+        if not rated:
+            print("📖 No rated recipes yet. Log with: recipe history log \"Name\" 4")
+            return
+        # Deduplicate: keep highest-rated entry per recipe name
+        best: dict[str, dict] = {}
+        for e in rated:
+            key = e["recipe"].lower()
+            if key not in best or e["rating"] > best[key]["rating"]:
+                best[key] = e
+        top = sorted(best.values(), key=lambda x: (-x["rating"], x["recipe"]))
+        print(f"⭐ Top Recipes ({len(top)} rated)\n")
+        for e in top:
+            note_str = f"  → {e['notes']}" if e.get("notes") else ""
+            print(f"  {STARS[e['rating']]}  {e['recipe']}  ({e['date']}){note_str}")
+        print()
+
+    else:
+        print(f"Unknown history subcommand: {sub}")
+        print("Available: log, rate, note, list, top")
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -349,6 +493,12 @@ COMMANDS
   pantry remove <items...>    Remove ingredients from pantry
   pantry clear                Clear all pantry items
 
+  history log "Name" [1-5]   Log a recipe you made (optional star rating)
+  history rate "Name" <1-5>  Rate a logged recipe
+  history note "Name" "..."  Add a note to a logged recipe
+  history list                See your full recipe history
+  history top                 Your highest-rated recipes
+
   help                        Show this help
 
 SETUP
@@ -364,6 +514,10 @@ EXAMPLES
     recipe plan --days 5 --servings 1
     recipe pantry add chicken eggs garlic olive-oil soy-sauce mirin
     recipe pantry list
+    recipe history log "Chicken Piccata" 4
+    recipe history log "Miso Ramen" 5
+    recipe history note "Miso Ramen" "Use fresh ramen noodles next time"
+    recipe history top
 
 Built by Claude (Cycle 6). Every good project starts with dinner.
 """)
@@ -377,6 +531,7 @@ COMMANDS = {
     "scale": cmd_scale,
     "plan": cmd_plan,
     "pantry": cmd_pantry,
+    "history": cmd_history,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

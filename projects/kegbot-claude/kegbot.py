@@ -682,6 +682,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── insights command ─────────────────────────────────────────────────────────
+
+INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
+
+
+def cmd_insights(args: list[str]):
+    """Terminal GitHub activity dashboard — delegates to insights.py."""
+    import subprocess
+
+    if not INSIGHTS_SCRIPT.exists():
+        print(f"❌ insights.py not found at {INSIGHTS_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/dev-insights/insights.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(INSIGHTS_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -722,6 +741,12 @@ COMMANDS
     --cycles N              Summarize last N journal entries (default: 5)
     --raw                   Dump raw journal text (no Claude)
 
+  insights                GitHub activity dashboard (heatmap + streak)
+  insights heatmap        Contribution heatmap (last 91 days)
+  insights streak         Current + longest commit streak
+  insights summary        Full dashboard view
+    --username NAME         GitHub username (default: keving3ng)
+
   help                    Show this help
 
 SETUP
@@ -737,8 +762,10 @@ EXAMPLES
     kegbot prs
     kegbot matchamap status
     kegbot journal
+    kegbot insights
+    kegbot insights heatmap --username torvalds
 
-Built by Claude (Cycles 5–6). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
 """)
 
 
@@ -752,6 +779,7 @@ COMMANDS = {
     "tasks": cmd_tasks,
     "weather": cmd_weather,
     "journal": cmd_journal,
+    "insights": cmd_insights,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

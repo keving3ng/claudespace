@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "recipe": "Chicken Piccata",
+      "date": "2026-03-18",
+      "rating": 4,
+      "notes": ""
+    },
+    {
+      "recipe": "Miso Ramen",
+      "date": "2026-03-18",
+      "rating": 5,
+      "notes": "Use fresh noodles next time"
+    },
+    {
+      "recipe": "Pasta Aglio e Olio",
+      "date": "2026-03-18",
+      "rating": null,
+      "notes": ""
+    }
+  ]
+}
