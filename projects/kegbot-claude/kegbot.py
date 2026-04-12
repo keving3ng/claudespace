@@ -685,6 +685,7 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_insights(args: list[str]):
@@ -697,6 +698,23 @@ def cmd_insights(args: list[str]):
         sys.exit(1)
 
     cmd = [sys.executable, str(INSIGHTS_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
+# ─── forge command ───────────────────────────────────────────────────────────
+
+
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -745,7 +763,15 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + velocity bars
     --username NAME         GitHub username (default: keving3ng)
+
+  forge trending          Trending GitHub repos in Kevin's stack
+  forge trending --lang   One language (python, typescript, java, ...)
+  forge trending --period Trend window: week (default) or month
+  forge ideas             trending repos → Claude → 3 weekend project ideas
+  forge ideas --stack     Comma-separated languages (default: python,typescript,java)
+  forge spark             One creative idea — pure Claude imagination
 
   help                    Show this help
 
@@ -764,8 +790,13 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge trending
+    kegbot forge ideas
+    kegbot forge ideas --stack python,go --period month
+    kegbot forge spark
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +811,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
