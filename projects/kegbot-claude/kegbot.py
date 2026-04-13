@@ -701,6 +701,27 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    # Default to 'ideas' if no subcommand given
+    effective_args = args if args and args[0] in ("trending", "suggest", "ideas", "help", "--help", "-h") else ["ideas"] + args
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + effective_args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -745,7 +766,17 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
+
+  forge                   AI project idea generator (trending GitHub → Claude ideas)
+  forge trending          Trending repos in your tech stack
+  forge suggest           One killer idea with full implementation plan
+  forge ideas             3 tailored project ideas
+    --count N               Number of ideas (default: 3)
+    --lang LANGUAGE         Focus on one language (python, typescript, java, kotlin)
+    --days N                Trend window in days (default: 7)
+    --raw                   Show trend data without calling Claude
 
   help                    Show this help
 
@@ -764,8 +795,13 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge
+    kegbot forge trending --lang python
+    kegbot forge suggest --days 14
+    kegbot forge ideas --count 5
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +816,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
