@@ -124,6 +124,42 @@ def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
 
+def fetch_repo_activity(username: str, days: int = 90) -> dict[str, int]:
+    """
+    Fetch PushEvent data aggregated by repo, returning {repo_name: commit_count}.
+    Also returns the full-name form (owner/repo) as the key.
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repo_counts: dict[str, int] = defaultdict(int)
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            repo_counts[repo_name] += max(num_commits, 1)
+
+        if reached_cutoff:
+            break
+
+    return dict(repo_counts)
+
+
 # ─── Heat level ───────────────────────────────────────────────────────────────
 
 
@@ -390,6 +426,90 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show which repos have the most commits over the tracked period."""
+    username = get_username(args)
+    days = 91
+
+    print(f"📦 Fetching repo activity for @{username}...")
+    repo_activity = fetch_repo_activity(username, days=days)
+
+    if not repo_activity:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    # Sort by commits descending
+    sorted_repos = sorted(repo_activity.items(), key=lambda x: x[1], reverse=True)
+    max_commits = sorted_repos[0][1] if sorted_repos else 1
+    total_commits = sum(c for _, c in sorted_repos)
+    BAR_WIDTH = 24
+
+    print(f"\n📦 Repo Activity — @{username} (last ~{days} days)\n")
+    print(f"   {'Repository':<32} {'Commits':>7}  {'Share':>5}  Activity")
+    print(f"   {'─' * 32} {'─' * 7}  {'─' * 5}  {'─' * BAR_WIDTH}")
+
+    for repo_full, count in sorted_repos[:12]:
+        # Strip username prefix if present (owner/repo → repo)
+        short_name = repo_full.split("/")[-1] if "/" in repo_full else repo_full
+        bar_len = max(1, round(count / max_commits * BAR_WIDTH))
+        bar = "█" * bar_len
+        share_pct = count / total_commits * 100 if total_commits else 0
+        print(
+            f"   {short_name:<32} {count:>7}  {share_pct:>4.0f}%  {bar}"
+        )
+
+    if len(sorted_repos) > 12:
+        extra = len(sorted_repos) - 12
+        extra_commits = sum(c for _, c in sorted_repos[12:])
+        print(f"   {'...' + str(extra) + ' more repo(s)':<32} {extra_commits:>7}")
+
+    print()
+    print(f"   Total: {total_commits} commits across {len(sorted_repos)} repo(s) in ~{days} days")
+
+    # Velocity hint: compare last 30 vs prior 30 days
+    recent_cutoff = date.today() - timedelta(days=30)
+    prior_cutoff = date.today() - timedelta(days=60)
+
+    recent_counts: dict[str, int] = defaultdict(int)
+    prior_counts: dict[str, int] = defaultdict(int)
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+        reached = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            try:
+                event_date = datetime.strptime(event.get("created_at", "")[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            n = max(len(event.get("payload", {}).get("commits", [])), 1)
+            if event_date >= recent_cutoff:
+                recent_counts[event.get("repo", {}).get("name", "")] += n
+            elif event_date >= prior_cutoff:
+                prior_counts[event.get("repo", {}).get("name", "")] += n
+            else:
+                reached = True
+        if reached:
+            break
+
+    recent_total = sum(recent_counts.values())
+    prior_total = sum(prior_counts.values())
+
+    print()
+    if prior_total > 0:
+        delta = recent_total - prior_total
+        arrow = "↑" if delta > 0 else ("↓" if delta < 0 else "→")
+        print(f"   Velocity: {recent_total} commits last 30d  {arrow}  {prior_total} prior 30d")
+    else:
+        print(f"   Velocity: {recent_total} commits in the last 30 days")
+
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,6 +523,7 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Most-committed repos + commit velocity
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -417,13 +538,14 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights summary -u keving3ng
+    insights repos
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -433,6 +555,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
