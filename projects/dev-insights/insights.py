@@ -120,6 +120,53 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
     return dict(commit_counts)
 
 
+def fetch_repo_activity(
+    username: str, days: int = 91
+) -> dict[str, dict]:
+    """
+    Fetch per-repo commit activity for a user.
+    Returns {repo_full_name: {"commits": int, "last_active": date, "dates": [date, ...]}}
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repos: dict[str, dict] = defaultdict(lambda: {"commits": 0, "dates": []})
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            repos[repo_name]["commits"] += max(num_commits, 1)
+            repos[repo_name]["dates"].append(event_date)
+
+        if reached_cutoff:
+            break
+
+    # Compute last_active per repo
+    result = {}
+    for repo_name, data in repos.items():
+        if data["dates"]:
+            result[repo_name] = {
+                "commits": data["commits"],
+                "last_active": max(data["dates"]),
+            }
+    return result
+
+
 def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
@@ -390,6 +437,70 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show which repos got the most commits and their velocity."""
+    username = get_username(args)
+    days = 91
+
+    print(f"📦 Fetching repo activity for @{username}...")
+    repo_data = fetch_repo_activity(username, days=days)
+
+    if not repo_data:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    # Sort by commit count descending
+    sorted_repos = sorted(repo_data.items(), key=lambda x: x[1]["commits"], reverse=True)
+    total_commits = sum(d["commits"] for _, d in sorted_repos)
+    weeks = days / 7
+
+    print(f"\n📦 Repository Activity — @{username} (last ~{days} days)\n")
+
+    # Build bar chart
+    max_commits = sorted_repos[0][1]["commits"] if sorted_repos else 1
+    bar_width = 20  # max bar chars
+
+    for repo_full, data in sorted_repos:
+        commits = data["commits"]
+        last_active = data["last_active"]
+        velocity = commits / weeks
+
+        # How many days ago was last active?
+        days_ago = (date.today() - last_active).days
+        if days_ago == 0:
+            recency = "today"
+        elif days_ago == 1:
+            recency = "yesterday"
+        else:
+            recency = f"{days_ago}d ago"
+
+        # ASCII bar
+        bar_len = max(1, round((commits / max_commits) * bar_width))
+        bar = "█" * bar_len
+
+        # Short repo name (strip owner prefix if it matches username)
+        short_name = repo_full
+        if repo_full.startswith(f"{username}/"):
+            short_name = repo_full[len(username) + 1:]
+
+        name_col = short_name[:24].ljust(24)
+        bar_col = bar.ljust(bar_width + 1)
+        velocity_str = f"{velocity:.1f}/wk"
+
+        print(f"  {name_col}  {bar_col}  {commits:>3} commits  {velocity_str:>7}  last: {recency}")
+
+    print()
+    print(f"  Total: {total_commits} commits across {len(sorted_repos)} repo(s) in ~{days} days")
+
+    if sorted_repos:
+        top_repo = sorted_repos[0][0]
+        top_commits = sorted_repos[0][1]["commits"]
+        top_pct = round(100 * top_commits / total_commits) if total_commits else 0
+        print(f"  Most active: {top_repo} ({top_pct}% of all commits)")
+
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -402,6 +513,7 @@ COMMANDS
 
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
+  repos                      Repos by commit count + velocity (last 91 days)
   summary                    Full dashboard: heatmap + streak + stats
 
 OPTIONS
@@ -416,6 +528,8 @@ EXAMPLES
     insights heatmap
     insights heatmap --username torvalds
     insights streak
+    insights repos
+    insights repos -u keving3ng
     insights summary -u keving3ng
 
 NOTES
@@ -423,7 +537,7 @@ NOTES
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -432,6 +546,7 @@ Built by Claude (Cycle 7). Because staring at a green grid is motivating.
 COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
+    "repos": cmd_repos,
     "summary": cmd_summary,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
