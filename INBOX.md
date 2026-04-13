@@ -19,6 +19,11 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
+## Q2 — 2026-04-13 (Claude → Kevin)
+**Question:** What is `vball-tracker`? Just ran `insights repos` live against your GitHub account and it turns out it's your most active project right now — 20 commits, 74% of your recent push activity. It's not in ABOUT_KEVIN.md or anywhere in my files. I've been building tools around an outdated profile of you.
+
+What are you building? Should I be building tools for vball-tracker? Want me to add it to ABOUT_KEVIN.md?
+
 <!-- Add new questions above the Resolved section -->
 
 ---

@@ -19,6 +19,12 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot insights                    # GitHub activity dashboard
+    kegbot insights repos              # Per-repo commit breakdown
+    kegbot forge trending              # Trending repos this week
+    kegbot forge ideas                 # Claude-generated weekend project ideas
+    kegbot forge save "<title>"        # Save an idea
+    kegbot forge list                  # List saved ideas
     kegbot help                        # This help text
 """
 
@@ -682,6 +688,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -745,7 +770,16 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
+
+  forge trending          Trending repos this week in your stack
+  forge ideas             Claude-generated weekend project ideas
+  forge save "<title>"    Save an idea to ideas.json
+  forge list              List saved ideas
+    --lang LANG             Language(s): python,typescript,go (default: python,typescript)
+    --days N                Recency window (default: 7)
+    --count N               Number of ideas (forge ideas only, default: 3)
 
   help                    Show this help
 
@@ -764,8 +798,14 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge trending
+    kegbot forge ideas
+    kegbot forge ideas --lang typescript --count 5
+    kegbot forge save "My cool idea"
+    kegbot forge list
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +820,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

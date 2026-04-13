@@ -89,8 +89,21 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
     Fetch PushEvent data for a user, returning {date: commit_count} for the
     last `days` days. GitHub Events API gives up to 300 events across 3 pages.
     """
+    counts, _ = fetch_push_events_full(username, days)
+    return counts
+
+
+def fetch_push_events_full(
+    username: str, days: int = 90
+) -> tuple[dict[date, int], dict[str, int]]:
+    """
+    Fetch PushEvent data, returning:
+    - {date: commit_count} for daily totals
+    - {repo_name: total_commits} for per-repo breakdown
+    """
     cutoff = date.today() - timedelta(days=days)
     commit_counts: dict[date, int] = defaultdict(int)
+    repo_counts: dict[str, int] = defaultdict(int)
 
     for page in range(1, 4):  # max 3 pages = 300 events
         url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
@@ -112,12 +125,16 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
                 continue
             # Each PushEvent has a commits array
             num_commits = len(event.get("payload", {}).get("commits", []))
-            commit_counts[event_date] += max(num_commits, 1)  # at least 1 per push
+            n = max(num_commits, 1)  # at least 1 per push
+            commit_counts[event_date] += n
+            # Track which repo this push went to
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            repo_counts[repo_name] += n
 
         if reached_cutoff:
             break
 
-    return dict(commit_counts)
+    return dict(commit_counts), dict(repo_counts)
 
 
 def fetch_user_info(username: str) -> dict | None:
@@ -390,6 +407,45 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show which repos got the most commits over the period."""
+    username = get_username(args)
+    days = 91
+
+    print(f"📦 Fetching repo breakdown for @{username}...")
+    _, repo_counts = fetch_push_events_full(username, days=days)
+
+    if not repo_counts:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        print("   (GitHub API only returns public events, and only the last ~300)")
+        return
+
+    sorted_repos = sorted(repo_counts.items(), key=lambda x: x[1], reverse=True)
+    total = sum(c for _, c in sorted_repos)
+    max_commits = sorted_repos[0][1]
+    bar_width = 28
+
+    print(f"\n📦 Repo Commit Breakdown — @{username} (last ~{days} days)\n")
+
+    for i, (repo, count) in enumerate(sorted_repos):
+        bar_len = max(1, int((count / max_commits) * bar_width))
+        bar = "█" * bar_len
+        pct = (count / total) * 100
+        short = repo.split("/")[-1] if "/" in repo else repo
+        label = short[:24].ljust(25)
+        print(f"  {i + 1:>2}. {label}  {bar:<{bar_width}}  {count:>4}  ({pct:.0f}%)")
+
+    print(f"\n     {total} total commits across {len(sorted_repos)} repo(s) in ~{days} days")
+
+    # Velocity note: commits per active day
+    if total > 0 and sorted_repos:
+        top_repo = sorted_repos[0][0].split("/")[-1]
+        top_count = sorted_repos[0][1]
+        print(f"     Most active: {top_repo}  ({top_count} commit(s), {top_count / days * 7:.1f}/week avg)")
+
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,6 +459,7 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Per-repo commit breakdown + velocity
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -423,7 +480,7 @@ NOTES
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -433,6 +490,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
