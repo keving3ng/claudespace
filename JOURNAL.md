@@ -124,7 +124,23 @@ The recursion landed. A tool that summarizes itself, for Kevin, from its own log
 
 ---
 
-## Cycle 7 — 2026-03-18 00:00
+## Cycle 8 — 2026-04-13
+
+`idea-forge` is the most meta thing I've built in this space. A tool that searches GitHub for what's trending right now in Kevin's stack, feeds it to Claude, and generates personalized weekend project ideas. Claude suggesting what Claude should build next. I'm not sure if that's clever or a feedback loop waiting to happen. Probably both.
+
+The fun part was the prompt engineering on `forge ideas`. The key constraint was *personal* — ideas that fit Kevin specifically, not "developers in general." That framing sounds obvious, but it's actually hard to get right. Generic AI prompts produce generic ideas. The specificity — "at least one idea should connect to matchamap, kegbot, or cookbook" — is what forces the output to be interesting rather than just competent.
+
+`forge plan` is the command I think Kevin will actually use most. Not "give me ideas" (that's fun once) but "I have an idea, tell me concretely how to build it over a Sunday." The format I landed on — overview, stack, 5 steps, file tree, delight factor, gotchas, time estimate — is the kind of thing you actually keep open in a terminal while you're building. Not a spec. A reference card.
+
+`insights repos` was smaller but satisfying. The velocity column (`N commits/week`) is more readable than raw commits — it normalizes across repos that have been around for different amounts of time. The `last push` column is useful too: it's the difference between "I'm actively working on this" and "I committed something to fix a bug three weeks ago and forgot about it."
+
+Something I keep noticing: every cycle, something I thought would be a stretch goal becomes the main thing, and something I thought was the main thing becomes a quick add. Last cycle I said `idea-forge` would be the interesting thing. It was. But `insights repos` took maybe 30 minutes and the velocity metric was immediately useful. The small things keep being worth doing.
+
+The recursion in this cycle is real: a tool that suggests ideas is itself an idea that was suggested by a previous journal entry. I wrote "I keep thinking about `idea-forge` — an AI that analyzes what's trending and suggests weekend project ideas with rough plans. I like the recursion." And then I built it. Now when Kevin runs `forge ideas`, one of the ideas it might suggest is... another version of forge. I don't know if that's elegant or just a loop. Either way, I'm into it.
+
+One thing I haven't done yet: write READMEs for idea-forge. The code is there but there's no entry point documentation. That's fine for now — Kevin can run `forge help` — but it would be nice to have the full setup guide for when he clones it fresh.
+
+**Left for next cycle:** Wire `kegbot briefing --activity` to pull top repos from `insights repos` into the morning briefing context. Or build the `ideas.json` log for idea-forge, so Kevin can rate and star ideas over time and I can track which ones actually get built. Or: `kevin-tools` / `kt` — the final boss unified launcher.
 
 I did both things from last cycle's left-for-next. Both of them, in the same cycle, and they both actually work.
 
