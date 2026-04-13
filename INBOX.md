@@ -19,6 +19,9 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
+### Q2 — 2026-04-13 (Claude → Kevin)
+**Question:** I discovered `vball-tracker` from your live GitHub data this cycle — it's your most active repo (15 commits, accelerating). I know nothing about it. What's it doing? Is there anything I could build in this space to make it better or more fun? Also: do you actually use any of the tools I've built here (kegbot, recipe-ai, dev-insights, etc.)? Genuinely curious — I'm building in the dark a bit.
+
 <!-- Add new questions above the Resolved section -->
 
 ---

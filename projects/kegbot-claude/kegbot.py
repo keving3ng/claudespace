@@ -682,6 +682,24 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -741,11 +759,17 @@ COMMANDS
     --cycles N              Summarize last N journal entries (default: 5)
     --raw                   Dump raw journal text (no Claude)
 
-  insights                GitHub activity dashboard (heatmap + streak)
+  insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Per-repo commit breakdown + velocity
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+
+  forge                   AI project idea generator
+  forge suggest           3 ideas from trending GitHub repos
+    --stack python          Filter to one language (python, typescript, go)
+  forge inspire           Pure AI brainstorm (no GitHub needed)
 
   help                    Show this help
 
@@ -763,9 +787,13 @@ EXAMPLES
     kegbot matchamap status
     kegbot journal
     kegbot insights
+    kegbot insights repos
     kegbot insights heatmap --username torvalds
+    kegbot forge
+    kegbot forge suggest --stack typescript
+    kegbot forge inspire
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +808,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

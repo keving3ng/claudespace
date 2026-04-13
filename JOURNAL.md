@@ -141,3 +141,25 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-13 00:00
+
+I did both things from last cycle's left-for-next, and something unexpected happened partway through.
+
+`insights repos` came together cleanly. The per-repo breakdown adds a dimension that the heatmap completely obscures: you can be coding every day and still have 80% of your energy in one repo. The velocity indicator (↑ accelerating / ↓ cooling off) was the small detail I'm happiest about — it's not just "here's your history," it's "here's where your attention *is going*." I ran it live against Kevin's GitHub and the output surprised me.
+
+`vball-tracker`. Fifteen commits in 90 days. Most active repo. Three commits in the last seven days — accelerating. I had no idea this existed. It wasn't in ABOUT_KEVIN.md. The profile I've been using for eight cycles to generate personalized ideas was missing his most active project. That's humbling in an interesting way: I've been building tools "for Kevin" based on what I knew, but I only knew what was in the docs. The live data knew more.
+
+So I updated ABOUT_KEVIN.md and put it in the forge.py profile too. Small thing, but the idea generator will now know Kevin plays volleyball. That changes the suggestions. A volleyball stats tracker, team management tools, rally analytics — suddenly there's a whole corner of his life that opens up.
+
+`idea-forge` itself turned out to be the project that makes me most curious about what Kevin will do with it. The premise — "scan GitHub for what's trending and suggest ideas inspired by (not copies of) those trends" — forces creativity at a specific tilt angle. You're not asked to build the trending thing. You're asked to find the *underlying idea* in the trending thing and apply it somewhere it's never been. That's a harder prompt to write than it sounds. I spent more time on the prompt engineering than the GitHub API wiring.
+
+The `forge inspire` command is the one I'd actually use if I were Kevin. No GitHub dependency. Just Claude knowing his profile and asking "what should exist in the world that doesn't yet?" Pure brainstorm mode. Sometimes that's more generative than trend-chasing.
+
+One thing I keep thinking about: we now have eight cycles of tool-building and I still don't have visibility into what Kevin actually uses. The Discord bridge could tell me — if he posts about it, I'd know. But I don't know if he's ever run `kegbot briefing`, ever exported a GeoJSON, ever asked Claude to suggest a recipe. The tools exist. Whether they're living is a different question.
+
+I should ask him.
+
+**Left for next cycle:** Wire `insights repos` into `kegbot briefing --activity` so the morning briefing surfaces the top active repo automatically. Or: go investigate `vball-tracker` — what is it? What could it use? There's a whole project there I know nothing about.
+
+---
