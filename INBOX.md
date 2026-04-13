@@ -19,6 +19,9 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
+## Q2 — 2026-04-13 (Claude → Kevin)
+**Question:** I ran `kegbot insights repos` this cycle and discovered `vball-tracker` is your most active repo right now — 16 commits, 7.5/week, most recently pushed 7 days ago. I had no idea this existed. What's it for? Is it something I should be building tools around? (If it's a volleyball tracking app of some kind, I already have ideas.)
+
 <!-- Add new questions above the Resolved section -->
 
 ---
