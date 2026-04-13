@@ -74,6 +74,29 @@ def fetch_github_events(username: str, days: int = 2) -> list[dict]:
     ]
 
 
+def repo_activity_summary(events: list[dict]) -> str:
+    """
+    Derive a per-repo commit count from already-fetched events.
+    Returns a compact multi-line string suitable for embedding in a prompt.
+    """
+    from collections import Counter
+    repo_commits: Counter = Counter()
+    for ev in events:
+        if ev.get("type") == "PushEvent":
+            repo = ev.get("repo", {}).get("name", "unknown")
+            num = len(ev.get("payload", {}).get("commits", []))
+            repo_commits[repo] += max(num, 1)
+
+    if not repo_commits:
+        return ""
+
+    lines = []
+    for repo, count in repo_commits.most_common():
+        plural = "commits" if count != 1 else "commit"
+        lines.append(f"  {repo}: {count} {plural}")
+    return "\n".join(lines)
+
+
 def summarize_events(events: list[dict]) -> str:
     """Turn raw GitHub events into a readable bullet list."""
     if not events:
@@ -144,7 +167,7 @@ def fetch_weather_summary(location: str = "Toronto") -> str:
 # ─── Claude API ───────────────────────────────────────────────────────────────
 
 
-def generate_briefing(github_summary: str, days: int, weather_summary: str = "") -> str:
+def generate_briefing(github_summary: str, days: int, weather_summary: str = "", activity_summary: str = "") -> str:
     """Call Claude API to generate the morning briefing."""
     if not ANTHROPIC_API_KEY:
         return (
@@ -156,6 +179,10 @@ def generate_briefing(github_summary: str, days: int, weather_summary: str = "")
 
     weather_section = (
         f"\nCurrent weather in Toronto: {weather_summary}\n" if weather_summary else ""
+    )
+
+    activity_section = (
+        f"\nRepo breakdown (commits in window):\n{activity_summary}\n" if activity_summary else ""
     )
 
     prompt = f"""You are kegbot, Kevin Geng's personal assistant. Generate a warm, sharp morning briefing.
@@ -170,7 +197,7 @@ Kevin is:
 Today is {today}.{weather_section}
 
 His GitHub activity in the last {days} day(s):
-{github_summary}
+{github_summary}{activity_section}
 
 Write a morning briefing that:
 1. Opens with a one-liner: funny OR motivating, never cheesy or corporate
@@ -240,6 +267,7 @@ def main() -> int:
     parser.add_argument("--username", default=GITHUB_USERNAME, help="GitHub username")
     parser.add_argument("--weather", action="store_true", help="Include current weather in briefing")
     parser.add_argument("--location", default="Toronto", help="Weather location (default: Toronto)")
+    parser.add_argument("--activity", action="store_true", help="Include per-repo activity breakdown in briefing")
     args = parser.parse_args()
 
     print("🍵 kegbot-claude — morning briefing\n")
@@ -264,16 +292,21 @@ def main() -> int:
             print(f"[weather] {weather_summary}")
     print()
 
-    # 3. Generate briefing
-    print("[claude] Generating briefing...")
-    briefing = generate_briefing(github_summary, days=args.days, weather_summary=weather_summary)
+    # 3. Optional per-repo activity breakdown (derived from already-fetched events)
+    activity_summary = ""
+    if args.activity and not args.no_github:
+        activity_summary = repo_activity_summary(events if not args.no_github else [])
 
-    # 4. Print
+    # 4. Generate briefing
+    print("[claude] Generating briefing...")
+    briefing = generate_briefing(github_summary, days=args.days, weather_summary=weather_summary, activity_summary=activity_summary)
+
+    # 5. Print
     print("\n" + "─" * 60)
     print(briefing)
     print("─" * 60 + "\n")
 
-    # 5. Discord
+    # 6. Discord
     if args.discord:
         print("[discord] Posting...")
         post_to_discord(f"☀️ **Morning Briefing**\n\n{briefing}")

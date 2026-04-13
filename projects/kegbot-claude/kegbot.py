@@ -682,6 +682,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI-powered project idea generator — delegates to idea_forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ idea_forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -718,6 +737,7 @@ COMMANDS
     --discord               Also post to Discord
     --days N                Days of GitHub history (default: 2)
     --weather               Include current weather in the briefing
+    --activity              Include per-repo commit breakdown in the briefing
     --location CITY         Weather location (default: Toronto)
     --no-github             Skip GitHub, vibes-only mode
     --username NAME         Different GitHub username
@@ -745,7 +765,15 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + 14-day velocity
     --username NAME         GitHub username (default: keving3ng)
+
+  forge                   AI project idea generator from GitHub trends
+  forge ideas             5 tailored weekend project ideas (default)
+  forge trending          Show trending repos without Claude synthesis
+  forge spark             One opinionated project pitch
+    --stack LANG            Language filter (python, typescript, go, all)
+    --days N                Trending window in days (default: 30)
 
   help                    Show this help
 
@@ -780,6 +808,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
