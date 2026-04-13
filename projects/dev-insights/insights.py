@@ -120,6 +120,42 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
     return dict(commit_counts)
 
 
+def fetch_repo_stats(username: str, days: int = 91) -> dict[str, int]:
+    """
+    Fetch push events and return {repo_full_name: commit_count} for the last
+    `days` days. Used by the `repos` command.
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repo_counts: dict[str, int] = defaultdict(int)
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            repo_counts[repo_name] += max(num_commits, 1)
+
+        if reached_cutoff:
+            break
+
+    return dict(repo_counts)
+
+
 def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
@@ -390,6 +426,53 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show which repos got the most commits in the last 91 days."""
+    username = get_username(args)
+    days = 91
+
+    print(f"📦 Fetching repo activity for @{username}...")
+    repo_counts = fetch_repo_stats(username, days=days)
+
+    if not repo_counts:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    sorted_repos = sorted(repo_counts.items(), key=lambda x: x[1], reverse=True)
+    total = sum(c for _, c in sorted_repos)
+    max_count = sorted_repos[0][1] if sorted_repos else 1
+    bar_width = 20  # max bar width in chars
+
+    print(f"\n📦 Repo Activity — @{username} (last ~{days} days)\n")
+
+    name_col = max(len(name) for name, _ in sorted_repos)
+    name_col = max(name_col, 12)
+
+    print(f"  {'Commits':>7}  {'Repository':<{name_col}}  Distribution")
+    print(f"  {'─'*7}  {'─'*name_col}  {'─'*bar_width}")
+
+    for repo_name, count in sorted_repos:
+        bar_len = max(1, round(count / max_count * bar_width))
+        bar = "▊" * bar_len
+        pct = round(count / total * 100)
+        print(f"  {count:>7}  {repo_name:<{name_col}}  {bar:<{bar_width}}  {pct}%")
+
+    print(f"\n  Total: {total} commit(s) across {len(sorted_repos)} active repo(s)")
+
+    if len(sorted_repos) == 1:
+        print(f"\n  💡 Laser focus — 100% of commits in one repo.")
+    elif len(sorted_repos) >= 2:
+        top_name, top_count = sorted_repos[0]
+        short_name = top_name.split("/")[-1]
+        pct = round(top_count / total * 100)
+        if pct >= 70:
+            print(f"\n  💡 {pct}% of commits went to {short_name} — that's your main act right now.")
+        else:
+            print(f"\n  💡 Spread across {len(sorted_repos)} repos — working on multiple fronts.")
+
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,6 +486,7 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Commits per repo — ranked activity breakdown
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -417,13 +501,15 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights summary -u keving3ng
+    insights repos
+    insights repos --username torvalds
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -433,6 +519,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

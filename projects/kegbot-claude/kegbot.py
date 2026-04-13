@@ -701,6 +701,25 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI-powered project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -745,7 +764,13 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Commits per repo — ranked breakdown
     --username NAME         GitHub username (default: keving3ng)
+
+  forge ideas             Generate 5 weekend project ideas via Claude
+    --lang LANG             Focus on one language (python/typescript/go)
+    --save                  Save ideas to ideas.json
+  forge browse            Browse previously saved idea sets
 
   help                    Show this help
 
@@ -764,8 +789,12 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge ideas
+    kegbot forge ideas --lang python --save
+    kegbot forge browse
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +809,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
