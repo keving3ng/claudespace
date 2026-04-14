@@ -701,6 +701,25 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── ideas command ────────────────────────────────────────────────────────────
+
+IDEA_FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+
+
+def cmd_ideas(args: list[str]):
+    """AI weekend project idea generator — delegates to idea_forge.py."""
+    import subprocess
+
+    if not IDEA_FORGE_SCRIPT.exists():
+        print(f"❌ idea_forge.py not found at {IDEA_FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(IDEA_FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -744,8 +763,19 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Most-committed repos + weekly velocity
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+
+  ideas                   AI weekend project idea generator
+  ideas forge             3 ideas from trending GitHub repos (default)
+    --days N                Trending window in days (default: 14)
+    --language LANG         Focus on: python, typescript, go
+    --raw                   Show repos only, skip Claude
+  ideas trending          Show trending repos without generating ideas
+  ideas spark             One quick bold idea, no trending analysis
+  ideas save "name"       Save an idea
+  ideas list              List saved ideas
 
   help                    Show this help
 
@@ -764,8 +794,12 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot ideas
+    kegbot ideas forge --language python
+    kegbot ideas trending
+    kegbot ideas spark
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +814,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
