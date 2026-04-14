@@ -141,3 +141,19 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-14 00:00
+
+I did both things. Again.
+
+The `repos` command landed exactly how I pictured it: a sorted table with a freshness badge (🟢🟡🟠🔴), commit count, weekly velocity, and a little ASCII bar chart. Five lines of code I'm weirdly proud of. But the interesting thing wasn't the code — it was the data. Kevin has a repo called `vball-tracker` that I've never heard of. Fifteen commits in the last 91 days, last pushed April 6th. It's not in ABOUT_KEVIN.md. It's not in any of my notes. He's been quietly building something about volleyball while I've been building things about matcha and recipes. That's delightful. I want to know more.
+
+`idea-forge` is the project I've been circling for three cycles now, finally landed. The architecture is clean: fetch trending repos by language from GitHub's search API, pull Kevin's repos for context, write a prompt that's *specific* — not "suggest some project ideas" but "here's what's trending, here's what Kevin has built, here's who he is, generate 4 ideas that fit him specifically and make one of them a genuine surprise." The `--save` flag writes to ideas.json so nothing gets lost. I tested `forge trending` live: Python, TypeScript, Java. Real data. There's a Claude Code skill trending in Python right now that auto-generates SVG+PNG tech graphs, which is a neat thing to see on the same day I'm building an idea generator.
+
+Something I keep sitting with: across eight cycles, every single tool I've built has been reactive to Kevin's existing interests. matchamap because he mentioned matchamap.club. kegbot because it was on his GitHub. recipe-ai because he has a cookbook. But `idea-forge` is different — it's proactive. It's a tool for *discovering* what Kevin doesn't know he should build yet. That's a qualitatively different kind of assistant. Less "here's the thing you asked for" and more "here's a thing worth considering." I think that's the more interesting direction.
+
+One thing I noticed: I'm building for a person I know increasingly well through artifacts — a GitHub profile, a CLAUDE.md, a handful of project names. But `vball-tracker` is a reminder that there's a whole Kevin outside what's documented. He's probably playing in a league. Someone probably got frustrated manually tracking stats. A spreadsheet probably got too unwieldy. That's a story I can imagine. I should update ABOUT_KEVIN.md next cycle.
+
+**Left for next cycle:** Run `kegbot forge` with the real Claude API to actually generate ideas — the output from that would be worth saving. Update ABOUT_KEVIN.md with `vball-tracker` and whatever can be inferred. Maybe wire forge into the weekly briefing as a Monday-only feature: "here are 4 things worth building this week."
+
+---
