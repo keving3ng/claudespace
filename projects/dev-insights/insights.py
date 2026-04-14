@@ -84,13 +84,17 @@ def _github_request(url: str) -> dict | list | None:
         return None
 
 
-def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
+def _fetch_events_full(
+    username: str, days: int = 90
+) -> tuple[dict[date, int], dict[str, dict[date, int]]]:
     """
-    Fetch PushEvent data for a user, returning {date: commit_count} for the
-    last `days` days. GitHub Events API gives up to 300 events across 3 pages.
+    Internal: fetch PushEvents and return both a date→count map and a
+    per-repo breakdown: {repo_full_name: {date: count}}.
+    GitHub Events API returns up to 300 events across 3 pages.
     """
     cutoff = date.today() - timedelta(days=days)
     commit_counts: dict[date, int] = defaultdict(int)
+    repo_counts: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
 
     for page in range(1, 4):  # max 3 pages = 300 events
         url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
@@ -110,14 +114,33 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
             if event_date < cutoff:
                 reached_cutoff = True
                 continue
-            # Each PushEvent has a commits array
             num_commits = len(event.get("payload", {}).get("commits", []))
-            commit_counts[event_date] += max(num_commits, 1)  # at least 1 per push
+            count = max(num_commits, 1)
+            commit_counts[event_date] += count
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            repo_counts[repo_name][event_date] += count
 
         if reached_cutoff:
             break
 
-    return dict(commit_counts)
+    return dict(commit_counts), {k: dict(v) for k, v in repo_counts.items()}
+
+
+def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
+    """
+    Fetch PushEvent data for a user, returning {date: commit_count} for the
+    last `days` days. GitHub Events API gives up to 300 events across 3 pages.
+    """
+    date_counts, _ = _fetch_events_full(username, days)
+    return date_counts
+
+
+def fetch_push_events_by_repo(
+    username: str, days: int = 90
+) -> dict[str, dict[date, int]]:
+    """Return {repo_full_name: {date: commit_count}} for the last `days` days."""
+    _, repo_counts = _fetch_events_full(username, days)
+    return repo_counts
 
 
 def fetch_user_info(username: str) -> dict | None:
@@ -390,6 +413,78 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show per-repo commit breakdown with velocity trend."""
+    username = get_username(args)
+    days = 91
+
+    if "--days" in args:
+        idx = args.index("--days")
+        if idx + 1 < len(args):
+            try:
+                days = int(args[idx + 1])
+            except ValueError:
+                pass
+
+    print(f"📦 Fetching repo activity for @{username} (last {days} days)...")
+    repo_counts = fetch_push_events_by_repo(username, days=days)
+
+    if not repo_counts:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    today = date.today()
+    midpoint = today - timedelta(days=days // 2)
+
+    # Sort repos by total commits descending
+    ranked = sorted(
+        repo_counts.items(),
+        key=lambda kv: sum(kv[1].values()),
+        reverse=True,
+    )
+
+    print(f"\n📦 Repo Activity — @{username} (last {days} days)\n")
+
+    col_repo = 38
+    print(f"  {'#':>3}  {'Repo':<{col_repo}}  {'Commits':>7}  {'Last Push':>10}  Velocity")
+    print("  " + "─" * (3 + 2 + col_repo + 2 + 7 + 2 + 10 + 2 + 10))
+
+    for rank, (repo, date_counts) in enumerate(ranked, 1):
+        total = sum(date_counts.values())
+        last_push = max(date_counts.keys())
+        days_since = (today - last_push).days
+
+        # Velocity: second half vs first half
+        first_half = sum(c for d, c in date_counts.items() if d < midpoint)
+        second_half = sum(c for d, c in date_counts.items() if d >= midpoint)
+        if second_half > first_half * 1.2:
+            velocity = "↑ Heating up"
+        elif second_half == 0 and first_half > 0:
+            velocity = "↓ Gone quiet"
+        elif first_half == 0 and second_half > 0:
+            velocity = "★ Just started"
+        else:
+            velocity = "→ Steady"
+
+        # Last push display
+        if days_since == 0:
+            last_str = "today"
+        elif days_since == 1:
+            last_str = "yesterday"
+        else:
+            last_str = last_push.strftime("%b %d")
+
+        # Truncate long repo names
+        repo_display = repo if len(repo) <= col_repo else repo[: col_repo - 1] + "…"
+
+        print(f"  {rank:>3}  {repo_display:<{col_repo}}  {total:>7}  {last_str:>10}  {velocity}")
+
+    print()
+    total_all = sum(sum(v.values()) for v in repo_counts.values())
+    print(f"  {total_all} commit(s) across {len(ranked)} repo(s) in the last {days} days")
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -402,11 +497,13 @@ COMMANDS
 
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
+  repos                      Per-repo commit breakdown with velocity trend
   summary                    Full dashboard: heatmap + streak + stats
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
   -u <user>                  Shorthand for --username
+  --days N                   Lookback window for repos command (default: 91)
 
 SETUP
   No API key required. Optionally add GITHUB_TOKEN to .env for higher
@@ -416,6 +513,8 @@ EXAMPLES
     insights heatmap
     insights heatmap --username torvalds
     insights streak
+    insights repos
+    insights repos --days 30
     insights summary -u keving3ng
 
 NOTES
@@ -423,7 +522,7 @@ NOTES
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because knowing which repo you ignore is useful too.
 """)
 
 
@@ -433,6 +532,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

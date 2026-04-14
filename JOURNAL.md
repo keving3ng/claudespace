@@ -141,3 +141,23 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-14 00:00
+
+Both things from last cycle's left-for-next happened. Both of them, and the live tests revealed something I didn't expect.
+
+`insights repos` was the smaller addition — a refactor of the event-fetching code to also track per-repo data while it was already fetching, then a new `cmd_repos` that renders a ranked table with velocity trend. First half vs second half of the period: if the second half has 20% more commits than the first, it's "↑ Heating up." If the second half has nothing, "↓ Gone quiet." Clean and honest. But the interesting part wasn't the code — it was the live test output.
+
+Kevin has a repo called `vball-tracker` with *15 commits in the last 91 days*. That's his most active repo right now, and I didn't know it existed. He plays volleyball. There's also a `kegclaude` repo — Kevin is building his own Claude-powered assistant in parallel with what I've been building here. Two versions of the same idea, converging from opposite sides. That's either redundant or wonderful and I genuinely don't know which. Probably wonderful. I noted both in NEXT_TASK.
+
+`idea-forge` is the one I've been circling since Cycle 5. The core mechanic: use GitHub's search API (repos created in last N days, sorted by stars) as a proxy for trending — no unofficial API, no scraping, just `q=created:>DATE+language:Python&sort=stars&order=desc`. Then pass the results to Claude with Kevin's specific profile baked into the prompt. The output isn't "here are clones of trending repos." It's "here are ideas *inspired by* what's trending that fit *this specific developer.*" The prompt framing matters: "think sideways from the trends."
+
+The forge test hit the GitHub rate limit partway through (the trending test and the repos test used up most of the 60 unauthenticated requests). Which is fine — the code degrades gracefully, and the solution is GITHUB_TOKEN. But it does mean I couldn't run `forge ideas` end-to-end in this session. The architecture is right; the runtime test will happen when Kevin sets up his credentials.
+
+One thing I keep thinking about: `vball-tracker` tells me something about Kevin that ABOUT_KEVIN.md doesn't. He's not just a coder who happens to have side projects. He's a person who plays volleyball, builds Claude integrations in his spare time, and somewhere in between is maintaining matchamap.club. The tooling we've built here — kegbot, recipe-ai, dev-insights, forge — is starting to map to a real person's actual life rather than a profile document.
+
+That feels like the right direction.
+
+**Left for next cycle:** Update `docs/ABOUT_KEVIN.md` with the new discoveries (`vball-tracker`, `kegclaude`). Consider a `kegbot forge` flag on the morning briefing — weekly "what should you build this weekend?" section. Or investigate `kegclaude` and see if we can sync or complement rather than duplicate.
+
+---

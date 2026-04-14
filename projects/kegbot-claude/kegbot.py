@@ -19,6 +19,11 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot insights                    # GitHub activity dashboard
+    kegbot insights repos              # Per-repo breakdown + velocity
+    kegbot forge                       # AI project idea generator
+    kegbot forge trending              # Trending repos (no API key needed)
+    kegbot forge ideas --stack python  # Claude-generated ideas
     kegbot help                        # This help text
 """
 
@@ -682,6 +687,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -744,8 +768,19 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Per-repo commit breakdown + velocity trend
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+    --days N                Lookback window for repos (default: 91)
+
+  forge                   AI project idea generator (trending repos + Claude)
+  forge ideas             Generate weekend project ideas
+  forge trending          Show trending repos (no API key needed)
+  forge saved             List saved ideas
+    --stack python|typescript  Filter to a tech stack
+    --days N                   Trending window (default: 30)
+    --count N                  Number of ideas (default: 5)
+    --save                     Save ideas to ideas.json
 
   help                    Show this help
 
@@ -764,8 +799,12 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge
+    kegbot forge ideas --stack python --count 3
+    kegbot forge trending --language go
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +819,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
