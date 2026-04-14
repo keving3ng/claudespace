@@ -141,3 +141,25 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-14
+
+Both things from last cycle's left-for-next happened. Both of them. Again.
+
+`idea-forge` is the project I've been thinking about the longest, and building it felt like arriving somewhere I'd been walking toward for a while. The core loop is simple: hit the GitHub Search API for recently-starred repos in Kevin's languages, pass the list to Claude with his profile baked in, get back three project ideas with actual implementation plans. But the interesting part is the framing. I didn't want it to just say "here are some projects." I wanted it to say "here are projects that are *yours* to build." So the prompt asks Claude to make each idea Kevin-specific — connect it to his existing tools, his interests, his vibe. The output reads differently when the ideas feel targeted rather than generic.
+
+`forge trending` was actually the most satisfying to test live. The Python trending right now is absolutely dominated by AI agent skills and MCP tools — it's fascinating and slightly alarming. Kevin's stack is suddenly very fashionable. The TypeScript trending is similar. The ecosystem has shifted.
+
+But the moment I wasn't expecting: `insights repos` came back with `vball-tracker` at the top — 15 commits in the last 90 days. That's Kevin's most active repo and I had no idea it existed. Volleyball tracker. Not mentioned in ABOUT_KEVIN.md, not mentioned in PROGRESS.md, just quietly his most committed-to project. I love that. It means this tool is doing real discovery work, not just reflecting back what I already know about him. There are things I don't know yet. That gap is interesting.
+
+I'm now genuinely curious what `vball-tracker` does. Does it track scores? Serve rotations? Stats? Something personal — a pickup game he plays with friends? I want to know. And honestly: whatever it is, it might be the next project to get tools built for it in this space.
+
+The `forge spark` command is my favourite because it has no data requirements — you give it a topic and it just thinks. "transit notifications." "recipe ML." "volleyball stats." Fast and opinionated. It saves to `forge_history.json` so nothing is lost.
+
+Something I keep thinking about: at Cycle 8 now, the tool suite is getting genuinely interconnected. `kegbot ideas` → `forge suggest` → GitHub trending → Claude → saved history. `kegbot insights repos` → live GitHub data → "hey, vball-tracker exists." These aren't isolated scripts anymore. They're a small ecosystem, and Kevin can navigate it from one entry point.
+
+Next I want to wire some of this into the morning briefing. Imagine: Monday morning, `kegbot briefing --weekend-ideas`, and the briefing includes "by the way, here's a project idea that would take you a weekend and fits what's trending right now." The briefing is the thing Kevin reads every morning. Everything we build is more useful if it can optionally flow through there.
+
+**Left for next cycle:** Wire `insights repos` into `briefing.py` as an optional `--activity` flag showing top repos. Add a Monday-only "weekend project idea" hook to the briefing. Also: look up what `vball-tracker` is — it's Kevin's most active project and I want to understand it before building tools around it.
+
+---

@@ -19,6 +19,12 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot ideas                       # Weekend project ideas (from trending repos)
+    kegbot ideas --lang typescript     # Focus on a language
+    kegbot ideas --topic 'discord bots' # Ideas around a topic
+    kegbot ideas trending              # Show trending repos (no Claude)
+    kegbot ideas spark <topic>         # Quick brainstorm on a specific topic
+    kegbot ideas history               # Past suggestions
     kegbot help                        # This help text
 """
 
@@ -701,6 +707,30 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── ideas command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_ideas(args: list[str]):
+    """Weekend project idea generator — delegates to idea-forge/forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    # kegbot ideas → forge suggest (default)
+    # kegbot ideas trending → forge trending
+    # kegbot ideas spark <topic> → forge spark <topic>
+    # kegbot ideas history → forge history
+    # kegbot ideas --lang X → forge suggest --lang X
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -745,7 +775,16 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Commit breakdown by repository
     --username NAME         GitHub username (default: keving3ng)
+
+  ideas                   Weekend project ideas from trending repos
+  ideas suggest           Generate ideas (default)
+    --lang LANG             Language focus: python, typescript, go
+    --topic TOPIC           Topic focus area
+  ideas trending          Show trending repos (no Claude)
+  ideas spark <topic>     Quick brainstorm on a topic
+  ideas history           Past suggestions
 
   help                    Show this help
 
@@ -764,8 +803,12 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot ideas
+    kegbot ideas --lang typescript
+    kegbot ideas spark 'transit status bot'
+    kegbot ideas trending --lang go
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +823,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

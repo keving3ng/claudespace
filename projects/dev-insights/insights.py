@@ -120,6 +120,51 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
     return dict(commit_counts)
 
 
+def fetch_push_events_by_repo(username: str, days: int = 90) -> dict[str, dict]:
+    """
+    Fetch PushEvent data grouped by repo, returning:
+      {repo_full_name: {"commits": N, "pushes": N, "last_push": date}}
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repo_stats: dict[str, dict] = defaultdict(
+        lambda: {"commits": 0, "pushes": 0, "last_push": None}
+    )
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            num_commits = max(num_commits, 1)
+
+            repo_stats[repo_name]["commits"] += num_commits
+            repo_stats[repo_name]["pushes"] += 1
+            last = repo_stats[repo_name]["last_push"]
+            if last is None or event_date > last:
+                repo_stats[repo_name]["last_push"] = event_date
+
+        if reached_cutoff:
+            break
+
+    return dict(repo_stats)
+
+
 def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
@@ -390,6 +435,57 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show commit breakdown by repository over the last 90 days."""
+    username = get_username(args)
+    days = 90
+
+    print(f"📦 Fetching repo activity for @{username}...")
+    repo_stats = fetch_push_events_by_repo(username, days=days)
+
+    if not repo_stats:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    # Sort by commit count descending
+    sorted_repos = sorted(repo_stats.items(), key=lambda x: x[1]["commits"], reverse=True)
+    total_commits = sum(s["commits"] for _, s in sorted_repos)
+    max_commits = sorted_repos[0][1]["commits"] if sorted_repos else 1
+
+    print(f"\n📦 Repo Commit Breakdown — @{username} (last {days} days)\n")
+    print(f"{'Repository':<40} {'Commits':>7}  {'Bar'}")
+    print("─" * 70)
+
+    bar_width = 24
+    for repo_name, stats in sorted_repos:
+        commits = stats["commits"]
+        pushes = stats["pushes"]
+        last = stats["last_push"]
+        last_str = last.strftime("%b %d") if last else "?"
+
+        # Short name: strip username prefix if it's Kevin's own repo
+        display = repo_name.split("/")[-1] if "/" in repo_name else repo_name
+        if len(display) > 38:
+            display = display[:35] + "..."
+
+        # ASCII bar
+        bar_len = max(1, round((commits / max_commits) * bar_width))
+        bar = "█" * bar_len
+
+        push_str = f"({pushes} push{'es' if pushes != 1 else ''})"
+        print(f"  {display:<38} {commits:>5}   {bar}  {push_str}  last {last_str}")
+
+    print("─" * 70)
+    print(f"  {'TOTAL':<38} {total_commits:>5}   across {len(sorted_repos)} repo(s)")
+    print()
+
+    # Commit velocity: commits per week
+    weeks = days / 7
+    velocity = round(total_commits / weeks, 1)
+    print(f"  Velocity: ~{velocity} commits/week over the last {days} days")
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,6 +499,7 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Commit breakdown by repository (last 90 days)
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -417,13 +514,15 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights summary -u keving3ng
+    insights repos
+    insights repos --username keving3ng
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -433,6 +532,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
