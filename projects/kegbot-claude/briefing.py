@@ -119,6 +119,91 @@ def summarize_events(events: list[dict]) -> str:
     return "\n".join(lines[:15])  # cap for context window sanity
 
 
+# ─── Activity summary (--activity flag) ──────────────────────────────────────
+
+
+def fetch_activity_summary(username: str) -> str:
+    """
+    Fetch a 91-day commit overview: current streak, total commits, top repo.
+    Returns a compact string suitable for embedding in the Claude prompt.
+    """
+    from collections import defaultdict
+    from datetime import date, timedelta
+
+    cutoff = date.today() - timedelta(days=91)
+    commit_counts: dict = defaultdict(int)  # date → count
+    repo_counts: dict = defaultdict(int)    # repo_name → count
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        headers = {
+            "User-Agent": "kegbot-claude/1.0",
+            "Accept": "application/vnd.github.v3+json",
+        }
+        if GITHUB_TOKEN:
+            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                events = json.loads(resp.read())
+        except Exception:
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                from datetime import datetime as _dt
+                event_date = _dt.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            n = len(event.get("payload", {}).get("commits", []))
+            commit_counts[event_date] += max(n, 1)
+            repo_name = event.get("repo", {}).get("name", "")
+            if repo_name:
+                repo_counts[repo_name] += max(n, 1)
+
+        if reached_cutoff:
+            break
+
+    if not commit_counts:
+        return ""
+
+    # Current streak
+    today = date.today()
+    current_streak = 0
+    check = today
+    while check in commit_counts and commit_counts[check] > 0:
+        current_streak += 1
+        check -= timedelta(days=1)
+    if current_streak == 0:
+        yesterday = today - timedelta(days=1)
+        check = yesterday
+        while check in commit_counts and commit_counts[check] > 0:
+            current_streak += 1
+            check -= timedelta(days=1)
+
+    total_commits = sum(commit_counts.values())
+    active_days = sum(1 for c in commit_counts.values() if c > 0)
+
+    parts = [
+        f"Current commit streak: {current_streak} day(s)",
+        f"Total commits last 91 days: {total_commits} across {active_days} active days",
+    ]
+
+    if repo_counts:
+        top_repo = max(repo_counts, key=repo_counts.get)
+        short = top_repo.split("/")[-1] if "/" in top_repo else top_repo
+        parts.append(f"Most active repo: {short} ({repo_counts[top_repo]} commits)")
+
+    return "\n".join(parts)
+
+
 # ─── Weather ──────────────────────────────────────────────────────────────────
 
 
@@ -144,7 +229,7 @@ def fetch_weather_summary(location: str = "Toronto") -> str:
 # ─── Claude API ───────────────────────────────────────────────────────────────
 
 
-def generate_briefing(github_summary: str, days: int, weather_summary: str = "") -> str:
+def generate_briefing(github_summary: str, days: int, weather_summary: str = "", activity_summary: str = "") -> str:
     """Call Claude API to generate the morning briefing."""
     if not ANTHROPIC_API_KEY:
         return (
@@ -157,6 +242,10 @@ def generate_briefing(github_summary: str, days: int, weather_summary: str = "")
     weather_section = (
         f"\nCurrent weather in Toronto: {weather_summary}\n" if weather_summary else ""
     )
+    activity_section = (
+        f"\nHis coding streak / 91-day activity:\n{activity_summary}\n"
+        if activity_summary else ""
+    )
 
     prompt = f"""You are kegbot, Kevin Geng's personal assistant. Generate a warm, sharp morning briefing.
 
@@ -167,7 +256,7 @@ Kevin is:
 - Into cooking, personal automation, Discord bots, and ML/AI
 - Pragmatic, likes things that are both fun AND useful
 
-Today is {today}.{weather_section}
+Today is {today}.{weather_section}{activity_section}
 
 His GitHub activity in the last {days} day(s):
 {github_summary}
@@ -177,7 +266,8 @@ Write a morning briefing that:
 2. In 2–3 sentences, reflects back what he's been building — show you noticed
 3. Suggests ONE concrete small thing he could do today (specific, actionable, based on his activity)
 4. Closes in 1 sentence — genuine, not a cheerleader
-{("5. Weave in the weather naturally — one sentence, only if it's relevant or funny (e.g. bad weather = good day to stay in and code)" if weather_summary else "")}
+{("5. Weave in the weather naturally — one sentence, only if it's relevant or funny" if weather_summary else "")}
+{("6. Reference the streak if it's interesting (e.g. building momentum, or gently nudge if streak is 0)" if activity_summary else "")}
 
 Constraints: under 200 words total. Use markdown. Be real. If there's no GitHub activity, be honest about it and make it interesting anyway."""
 
@@ -240,6 +330,7 @@ def main() -> int:
     parser.add_argument("--username", default=GITHUB_USERNAME, help="GitHub username")
     parser.add_argument("--weather", action="store_true", help="Include current weather in briefing")
     parser.add_argument("--location", default="Toronto", help="Weather location (default: Toronto)")
+    parser.add_argument("--activity", action="store_true", help="Include 91-day commit streak + top repo in briefing")
     args = parser.parse_args()
 
     print("🍵 kegbot-claude — morning briefing\n")
@@ -262,18 +353,30 @@ def main() -> int:
         weather_summary = fetch_weather_summary(args.location)
         if weather_summary:
             print(f"[weather] {weather_summary}")
+
+    # 3. Activity summary (optional)
+    activity_summary = ""
+    if args.activity:
+        print(f"[activity] Fetching 91-day stats for {args.username}...")
+        activity_summary = fetch_activity_summary(args.username)
+        if activity_summary:
+            print(f"[activity] {activity_summary.splitlines()[0]}")
     print()
 
-    # 3. Generate briefing
+    # 4. Generate briefing
     print("[claude] Generating briefing...")
-    briefing = generate_briefing(github_summary, days=args.days, weather_summary=weather_summary)
+    briefing = generate_briefing(
+        github_summary, days=args.days,
+        weather_summary=weather_summary,
+        activity_summary=activity_summary,
+    )
 
-    # 4. Print
+    # 5. Print
     print("\n" + "─" * 60)
     print(briefing)
     print("─" * 60 + "\n")
 
-    # 5. Discord
+    # 6. Discord
     if args.discord:
         print("[discord] Posting...")
         post_to_discord(f"☀️ **Morning Briefing**\n\n{briefing}")

@@ -701,6 +701,25 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── forge command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI weekend project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -718,6 +737,7 @@ COMMANDS
     --discord               Also post to Discord
     --days N                Days of GitHub history (default: 2)
     --weather               Include current weather in the briefing
+    --activity              Include 91-day commit streak + top repo
     --location CITY         Weather location (default: Toronto)
     --no-github             Skip GitHub, vibes-only mode
     --username NAME         Different GitHub username
@@ -744,8 +764,14 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Most-committed-to repos + commit velocity
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+
+  forge                   AI weekend project idea generator (trending → Claude ideas)
+  forge trending          Show trending repos in Kevin's stack (no API key needed)
+  forge trending --language typescript|python|java
+    --language LANG         Filter to one language
 
   help                    Show this help
 
@@ -763,9 +789,14 @@ EXAMPLES
     kegbot matchamap status
     kegbot journal
     kegbot insights
+    kegbot insights repos
     kegbot insights heatmap --username torvalds
+    kegbot forge
+    kegbot forge trending
+    kegbot forge trending --language python
+    kegbot briefing --weather --activity
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +811,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
