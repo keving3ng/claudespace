@@ -124,6 +124,42 @@ def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
 
+def fetch_repo_activity(username: str, days: int = 90) -> dict[str, dict[date, int]]:
+    """
+    Fetch PushEvent data broken down by repository.
+    Returns {repo_full_name: {date: commit_count}}.
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repos: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            repos[repo_name][event_date] += max(num_commits, 1)
+
+        if reached_cutoff:
+            break
+
+    return {k: dict(v) for k, v in repos.items()}
+
+
 # ─── Heat level ───────────────────────────────────────────────────────────────
 
 
@@ -390,6 +426,98 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def cmd_repos(args: list[str]):
+    """Show commit activity broken down by repository."""
+    username = get_username(args)
+    days = 90
+
+    print(f"📦 Fetching repo activity for @{username} (last {days} days)...")
+
+    repo_activity = fetch_repo_activity(username, days=days)
+
+    if not repo_activity:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    # Aggregate totals and compute weekly velocity
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    four_weeks_ago = today - timedelta(days=28)
+
+    repo_stats = []
+    for repo_name, day_counts in repo_activity.items():
+        total = sum(day_counts.values())
+        last_7d = sum(c for d, c in day_counts.items() if d > week_ago)
+        last_28d = sum(c for d, c in day_counts.items() if d > four_weeks_ago)
+        weekly_avg = last_28d / 4.0  # avg commits/week over last 4 weeks
+        last_active = max(day_counts.keys())
+        repo_stats.append({
+            "name": repo_name,
+            "total": total,
+            "last_7d": last_7d,
+            "last_28d": last_28d,
+            "weekly_avg": weekly_avg,
+            "last_active": last_active,
+            "active_days": len(day_counts),
+        })
+
+    # Sort by total commits, descending
+    repo_stats.sort(key=lambda r: r["total"], reverse=True)
+
+    print(f"\n📦 Repository Activity — @{username} (last ~{days} days)\n")
+
+    # Build mini 4-week bar for each repo
+    # Divide the last 28 days into 4 weekly buckets
+    week_starts = [today - timedelta(days=7 * i) for i in range(4, 0, -1)]
+
+    header_weeks = "  ".join(ws.strftime("%b %d") for ws in week_starts)
+    print(f"  {'Repository':<38}  {'Total':>5}  {'7d':>4}  {header_weeks}")
+    print("  " + "─" * 80)
+
+    for r in repo_stats:
+        short_name = r["name"].split("/")[-1]  # strip owner prefix
+        if len(short_name) > 36:
+            short_name = short_name[:35] + "…"
+
+        # Weekly bucket commits
+        week_buckets = []
+        for i in range(4, 0, -1):
+            bucket_end = today - timedelta(days=7 * (i - 1))
+            bucket_start = bucket_end - timedelta(days=7)
+            week_commits = sum(
+                c for d, c in repo_activity[r["name"]].items()
+                if bucket_start < d <= bucket_end
+            )
+            bar = _mini_bar(week_commits)
+            week_buckets.append(f"{bar:>8}")
+
+        weeks_str = "  ".join(week_buckets)
+        marker = " ★" if r == repo_stats[0] else "  "
+        print(f"{marker} {short_name:<38}  {r['total']:>5}  {r['last_7d']:>4}  {weeks_str}")
+
+    print()
+    print(f"  {len(repo_stats)} active repo(s)  ·  "
+          f"{sum(r['total'] for r in repo_stats)} total commits  ·  "
+          f"last {days} days")
+
+    # Most productive repo callout
+    if repo_stats:
+        top = repo_stats[0]
+        short = top["name"].split("/")[-1]
+        avg = top["weekly_avg"]
+        print(f"\n  ★ Most active: {short}  "
+              f"({top['total']} commits, ~{avg:.1f}/week avg)")
+    print()
+
+
+def _mini_bar(n: int) -> str:
+    """Turn a commit count into a short visual bar (max 6 chars)."""
+    if n == 0:
+        return "·"
+    bars = min(n, 5)
+    return "▮" * bars + f"({n})" if n > 0 else "·"
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,6 +531,7 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Per-repo commit breakdown + weekly velocity
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -417,13 +546,15 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights summary -u keving3ng
+    insights repos
+    insights repos --username torvalds
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
@@ -433,6 +564,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

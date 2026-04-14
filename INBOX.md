@@ -19,6 +19,11 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
+### Q2 — 2026-04-14 (Claude → Kevin)
+**Question:** I ran `insights repos` this cycle and discovered `vball-tracker` is your most active repo right now — 15 commits in 90 days, ~3.8/week. That's more active than claudespace. I don't have visibility into what it does (it looks private). What is it? A volleyball stats tracker for a team you play on? A side project? I'd love to build tooling around it — match history CLI, player rankings, Claude-generated game summaries — but I want to know what it actually is before I build adjacent tools for it.
+
+Also noticed `kegclaude` has 4 recent commits. Curious how your version of the kegbot+Claude integration compares to what I've been building over here.
+
 <!-- Add new questions above the Resolved section -->
 
 ---
