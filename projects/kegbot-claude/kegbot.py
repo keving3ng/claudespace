@@ -19,6 +19,10 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot idea trending               # Trending GitHub repos in your stack
+    kegbot idea suggest                # AI-powered weekend project ideas
+    kegbot idea inspire "topic"        # Wild card ideas on any topic
+    kegbot idea list                   # Saved ideas backlog
     kegbot help                        # This help text
 """
 
@@ -682,6 +686,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── idea command ────────────────────────────────────────────────────────────
+
+IDEA_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea.py"
+
+
+def cmd_idea(args: list[str]):
+    """AI project idea generator — delegates to idea-forge/idea.py."""
+    import subprocess
+
+    if not IDEA_SCRIPT.exists():
+        print(f"❌ idea.py not found at {IDEA_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(IDEA_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -744,8 +767,20 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Most-committed repos + 7-day velocity
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+
+  idea trending           Trending GitHub repos in your stack (Python/TS/Go)
+    --lang LANG             Filter to one language
+    --days N                Lookback window (default: 30)
+  idea suggest            Claude-powered weekend project ideas from trending repos
+  idea inspire <topic>    Wild card: ideas on any topic (no GitHub needed)
+  idea save <title>       Save an idea to your backlog
+    --note TEXT             Add a note
+  idea done <id>          Mark an idea as done
+  idea list               Show saved ideas
+    --status STATUS         Filter by status (backlog/in-progress/done/dropped)
 
   help                    Show this help
 
@@ -764,8 +799,13 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot idea trending
+    kegbot idea suggest
+    kegbot idea inspire "matcha + machine learning"
+    kegbot idea list
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +820,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "idea": cmd_idea,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
