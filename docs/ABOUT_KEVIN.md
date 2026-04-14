@@ -20,6 +20,8 @@
 | Repo | Description | Last pushed | Essence |
 |------|-------------|-------------|---------|
 | **claudespace** | claude be workin | 2026-03 | This space — autonomous build lab |
+| **vball-tracker** | — | 2026-04 | Most active repo (15 commits in 91 days). Volleyball stats tracking. Unknown scope — ask Kevin. |
+| **kegclaude** | — | 2026-04 | Kevin's own Claude integration project (4 commits). May overlap with kegbot/claudespace — ask Kevin about synergy. |
 | **matchamap** | the matchamap (private) | 2026-03 | Map-based matcha cafe finder → matchamap.club; actively building |
 | **kgeng.dev** | kgeng.dev | 2026-03 | Personal site |
 | **kegbot** | personal assistant? | 2026-02 | Python personal assistant; daily briefings, automation, “supercharge with Claude” candidate |

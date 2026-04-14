@@ -701,6 +701,29 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
+# ─── ideas command ────────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_ideas(args: list[str]):
+    """AI-powered weekend project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
+        sys.exit(1)
+
+    # Default: run `forge ideas`
+    sub = args[0] if args and args[0] in ("ideas", "trending", "help") else "ideas"
+    rest = args[1:] if args and args[0] in ("ideas", "trending", "help") else args
+
+    cmd = [sys.executable, str(FORGE_SCRIPT), sub] + rest
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── help ─────────────────────────────────────────────────────────────────────
 
 
@@ -745,7 +768,15 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
+    --top N                 Show top N repos (repos command, default: 10)
+
+  ideas                   AI weekend project idea generator
+  ideas trending          Show raw trending repos (no API key needed)
+  ideas trending --lang   Filter to a specific language
+    --discord               Post ideas to Discord
+    --verbose               Show which repos were used for ideas
 
   help                    Show this help
 
@@ -763,9 +794,12 @@ EXAMPLES
     kegbot matchamap status
     kegbot journal
     kegbot insights
+    kegbot insights repos
     kegbot insights heatmap --username torvalds
+    kegbot ideas
+    kegbot ideas trending --lang python
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +814,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
