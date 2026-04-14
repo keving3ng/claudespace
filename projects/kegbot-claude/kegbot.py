@@ -19,6 +19,10 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot forge spark                 # 3 micro-project ideas (offline, no API key)
+    kegbot forge trending              # Trending GitHub repos in your stack
+    kegbot forge ideas                 # Claude-powered project ideas from trending
+    kegbot forge plan "an idea"        # Full implementation roadmap for an idea
     kegbot help                        # This help text
 """
 
@@ -682,6 +686,24 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── forge command ───────────────────────────────────────────────────────────
+
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
+
+def cmd_forge(args: list[str]):
+    """AI-powered project idea generator — delegates to forge.py."""
+    import subprocess
+
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -745,7 +767,16 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit breakdown + velocity ranking
     --username NAME         GitHub username (default: keving3ng)
+
+  forge                   AI-powered project idea generator
+  forge trending          What's gaining stars on GitHub right now
+  forge ideas             Claude-powered ideas tailored to your profile
+  forge plan "<idea>"     Full implementation roadmap for an idea
+  forge spark             3 offline micro-ideas (no API key needed)
+    --lang LANG             Language filter (python, typescript, go, ...)
+    --topic TOPIC           Focus area for idea generation
 
   help                    Show this help
 
@@ -764,8 +795,13 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot forge spark
+    kegbot forge trending --lang python
+    kegbot forge ideas --topic "discord bots"
+    kegbot forge plan "a terminal finance tracker"
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +816,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
