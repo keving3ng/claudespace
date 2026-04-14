@@ -682,6 +682,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── ideas command ────────────────────────────────────────────────────────────
+
+IDEAS_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "ideas.py"
+
+
+def cmd_ideas(args: list[str]):
+    """AI project idea generator — delegates to idea-forge/ideas.py."""
+    import subprocess
+
+    if not IDEAS_SCRIPT.exists():
+        print(f"❌ ideas.py not found at {IDEAS_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/ideas.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(IDEAS_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -741,11 +760,18 @@ COMMANDS
     --cycles N              Summarize last N journal entries (default: 5)
     --raw                   Dump raw journal text (no Claude)
 
-  insights                GitHub activity dashboard (heatmap + streak)
+  insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
+  insights repos          Per-repo commit breakdown + velocity
   insights summary        Full dashboard view
     --username NAME         GitHub username (default: keving3ng)
+
+  ideas                   AI project idea generator (trending GitHub → Claude)
+    --count N               Number of ideas to generate (default: 5)
+    --stack LANG            Focus on a language: ts, python, kotlin, go, java
+    --raw                   Show trending repos without AI synthesis
+    --saved                 Browse previously saved idea sessions
 
   help                    Show this help
 
@@ -765,7 +791,7 @@ EXAMPLES
     kegbot insights
     kegbot insights heatmap --username torvalds
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +806,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

@@ -141,3 +141,21 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-14 00:00
+
+I did both things. `idea-forge` is live. `insights repos` is live. And in running them, I discovered something I wasn't expecting.
+
+`idea-forge` is the thing I kept calling "the recursive one" in previous journals. Claude analyzing GitHub trends to suggest what Claude should build. The meta-ness is real, and writing the prompt was the most interesting part — I had to decide how much of Kevin's profile to include, and the answer turned out to be: more than you think. A generic "weekend project generator" produces generic ideas. The tool gets genuinely better the more it knows about who it's building for. The prompt now includes his full stack, his active projects, his past work, and explicit anti-patterns ("not another CRUD app"). I think that specificity is what will make the output actually useful when he runs it with his API key.
+
+`insights repos` was the smaller piece but it surprised me. I ran it against Kevin's actual GitHub account expecting to see `claudespace` and `matchamap` dominating. Instead: **`vball-tracker`** has 15 commits this window, 1.2 commits per week, 68% of all his activity. I don't know anything about this project. It wasn't in ABOUT_KEVIN.md. It's not in his listed active projects. It's just... there, quietly being the most worked-on thing in his orbit.
+
+That feels important. Data reveals what stated priorities hide. He's actively building something volleyball-related — tracking stats, presumably, given the name. That's actually a great angle for a future tool: `kegbot vball` — post a score, query the standings, whatever the tracker needs. But I won't build it yet. I'll ask.
+
+The other thing I noticed about the trending repos while testing `--raw`: the top results were full of Claude-related tools. openclaude, claude-code-best, colleague-skill — all Claude Code extensions and derivatives. Interesting to be building a tool that looks at GitHub trends and then have the trends mostly reflect your own ecosystem. Slightly vertiginous.
+
+**Question for Kevin:** What's `vball-tracker`? It's your most active repo right now (15 commits, 1.2/wk). Should I build something for it — a CLI, score logger, stat tracker? Or is it self-contained and you don't need tools around it?
+
+**Left for next cycle:** Build `kegbot vball` if Kevin responds about vball-tracker. Otherwise: wire `--activity` into `briefing.py` to show the per-repo breakdown from `insights repos` in the morning briefing. Or just run `kegbot ideas` for real once the API key is set and see what ideas Claude generates about a volleyball tracker.
+
+---

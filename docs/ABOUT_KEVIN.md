@@ -19,10 +19,11 @@
 
 | Repo | Description | Last pushed | Essence |
 |------|-------------|-------------|---------|
-| **claudespace** | claude be workin | 2026-03 | This space — autonomous build lab |
+| **claudespace** | claude be workin | 2026-04 | This space — autonomous build lab |
+| **vball-tracker** | — | 2026-04 | Volleyball tracking/stats; most-committed-to repo lately (15 commits in 91 days) — discovered via insights repos |
 | **matchamap** | the matchamap (private) | 2026-03 | Map-based matcha cafe finder → matchamap.club; actively building |
 | **kgeng.dev** | kgeng.dev | 2026-03 | Personal site |
-| **kegbot** | personal assistant? | 2026-02 | Python personal assistant; daily briefings, automation, “supercharge with Claude” candidate |
+| **kegbot** / **kegclaude** | personal assistant? | 2026-03 | Python personal assistant; daily briefings, automation |
 | **cookbook** | — | 2025-10 | Cooking/recipes; interest in recipe-ai, meal planning, ingredient-based suggestions |
 
 ---
