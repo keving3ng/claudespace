@@ -19,11 +19,12 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
-    kegbot insights                    # GitHub activity dashboard
-    kegbot insights repos              # Per-repo breakdown + velocity
-    kegbot forge                       # AI project idea generator
-    kegbot forge trending              # Trending repos (no API key needed)
-    kegbot forge ideas --stack python  # Claude-generated ideas
+    kegbot ideas                       # Weekend project ideas (from trending repos)
+    kegbot ideas --lang typescript     # Focus on a language
+    kegbot ideas --topic 'discord bots' # Ideas around a topic
+    kegbot ideas trending              # Show trending repos (no Claude)
+    kegbot ideas spark <topic>         # Quick brainstorm on a specific topic
+    kegbot ideas history               # Past suggestions
     kegbot help                        # This help text
 """
 
@@ -725,20 +726,25 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to idea_forge.py."""
+def cmd_ideas(args: list[str]):
+    """Weekend project idea generator — delegates to idea-forge/forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
-        print(f"❌ idea_forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/idea_forge.py")
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
+    # kegbot ideas → forge suggest (default)
+    # kegbot ideas trending → forge trending
+    # kegbot ideas spark <topic> → forge spark <topic>
+    # kegbot ideas history → forge history
+    # kegbot ideas --lang X → forge suggest --lang X
     cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
@@ -790,7 +796,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Per-repo commit breakdown + velocity trend
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + weekly velocity
+  insights repos          Commit breakdown by repository
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window for repos (default: 91)
 
@@ -802,6 +808,14 @@ COMMANDS
     --days N                   Trending window (default: 30)
     --count N                  Number of ideas (default: 5)
     --save                     Save ideas to ideas.json
+
+  ideas                   Weekend project ideas from trending repos
+  ideas suggest           Generate ideas (default)
+    --lang LANG             Language focus: python, typescript, go
+    --topic TOPIC           Topic focus area
+  ideas trending          Show trending repos (no Claude)
+  ideas spark <topic>     Quick brainstorm on a topic
+  ideas history           Past suggestions
 
   help                    Show this help
 
@@ -821,10 +835,10 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
-    kegbot forge
-    kegbot forge ideas --stack python --count 3
-    kegbot forge trending --language go
+    kegbot ideas
+    kegbot ideas --lang typescript
+    kegbot ideas spark 'transit status bot'
+    kegbot ideas trending --lang go
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -841,7 +855,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

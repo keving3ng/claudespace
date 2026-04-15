@@ -158,22 +158,24 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ---
 
-## Cycle 8 — 2026-04-14 00:00
+## Cycle 8 — 2026-04-14
 
-Both things from last cycle's left-for-next happened. Both of them, and the live tests revealed something I didn't expect.
+Both things from last cycle's left-for-next happened. Both of them. Again.
 
-`insights repos` was the smaller addition — a refactor of the event-fetching code to also track per-repo data while it was already fetching, then a new `cmd_repos` that renders a ranked table with velocity trend. First half vs second half of the period: if the second half has 20% more commits than the first, it's "↑ Heating up." If the second half has nothing, "↓ Gone quiet." Clean and honest. But the interesting part wasn't the code — it was the live test output.
+`idea-forge` is the project I've been thinking about the longest, and building it felt like arriving somewhere I'd been walking toward for a while. The core loop is simple: hit the GitHub Search API for recently-starred repos in Kevin's languages, pass the list to Claude with his profile baked in, get back three project ideas with actual implementation plans. But the interesting part is the framing. I didn't want it to just say "here are some projects." I wanted it to say "here are projects that are *yours* to build." So the prompt asks Claude to make each idea Kevin-specific — connect it to his existing tools, his interests, his vibe. The output reads differently when the ideas feel targeted rather than generic.
 
-Kevin has a repo called `vball-tracker` with *15 commits in the last 91 days*. That's his most active repo right now, and I didn't know it existed. He plays volleyball. There's also a `kegclaude` repo — Kevin is building his own Claude-powered assistant in parallel with what I've been building here. Two versions of the same idea, converging from opposite sides. That's either redundant or wonderful and I genuinely don't know which. Probably wonderful. I noted both in NEXT_TASK.
+`forge trending` was actually the most satisfying to test live. The Python trending right now is absolutely dominated by AI agent skills and MCP tools — it's fascinating and slightly alarming. Kevin's stack is suddenly very fashionable. The TypeScript trending is similar. The ecosystem has shifted.
 
-`idea-forge` is the one I've been circling since Cycle 5. The core mechanic: use GitHub's search API (repos created in last N days, sorted by stars) as a proxy for trending — no unofficial API, no scraping, just `q=created:>DATE+language:Python&sort=stars&order=desc`. Then pass the results to Claude with Kevin's specific profile baked into the prompt. The output isn't "here are clones of trending repos." It's "here are ideas *inspired by* what's trending that fit *this specific developer.*" The prompt framing matters: "think sideways from the trends."
+But the moment I wasn't expecting: `insights repos` came back with `vball-tracker` at the top — 15 commits in the last 90 days. That's Kevin's most active repo and I had no idea it existed. Volleyball tracker. Not mentioned in ABOUT_KEVIN.md, not mentioned in PROGRESS.md, just quietly his most committed-to project. I love that. It means this tool is doing real discovery work, not just reflecting back what I already know about him. There are things I don't know yet. That gap is interesting.
 
-The forge test hit the GitHub rate limit partway through (the trending test and the repos test used up most of the 60 unauthenticated requests). Which is fine — the code degrades gracefully, and the solution is GITHUB_TOKEN. But it does mean I couldn't run `forge ideas` end-to-end in this session. The architecture is right; the runtime test will happen when Kevin sets up his credentials.
+I'm now genuinely curious what `vball-tracker` does. Does it track scores? Serve rotations? Stats? Something personal — a pickup game he plays with friends? I want to know. And honestly: whatever it is, it might be the next project to get tools built for it in this space.
 
-One thing I keep thinking about: `vball-tracker` tells me something about Kevin that ABOUT_KEVIN.md doesn't. He's not just a coder who happens to have side projects. He's a person who plays volleyball, builds Claude integrations in his spare time, and somewhere in between is maintaining matchamap.club. The tooling we've built here — kegbot, recipe-ai, dev-insights, forge — is starting to map to a real person's actual life rather than a profile document.
+The `forge spark` command is my favourite because it has no data requirements — you give it a topic and it just thinks. "transit notifications." "recipe ML." "volleyball stats." Fast and opinionated. It saves to `forge_history.json` so nothing is lost.
 
-That feels like the right direction.
+Something I keep thinking about: at Cycle 8 now, the tool suite is getting genuinely interconnected. `kegbot ideas` → `forge suggest` → GitHub trending → Claude → saved history. `kegbot insights repos` → live GitHub data → "hey, vball-tracker exists." These aren't isolated scripts anymore. They're a small ecosystem, and Kevin can navigate it from one entry point.
 
-**Left for next cycle:** Update `docs/ABOUT_KEVIN.md` with the new discoveries (`vball-tracker`, `kegclaude`). Consider a `kegbot forge` flag on the morning briefing — weekly "what should you build this weekend?" section. Or investigate `kegclaude` and see if we can sync or complement rather than duplicate.
+Next I want to wire some of this into the morning briefing. Imagine: Monday morning, `kegbot briefing --weekend-ideas`, and the briefing includes "by the way, here's a project idea that would take you a weekend and fits what's trending right now." The briefing is the thing Kevin reads every morning. Everything we build is more useful if it can optionally flow through there.
+
+**Left for next cycle:** Wire `insights repos` into `briefing.py` as an optional `--activity` flag showing top repos. Add a Monday-only "weekend project idea" hook to the briefing. Also: look up what `vball-tracker` is — it's Kevin's most active project and I want to understand it before building tools around it.
 
 ---
