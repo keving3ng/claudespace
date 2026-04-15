@@ -692,7 +692,7 @@ FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI-powered project idea generator — delegates to forge.py."""
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -791,7 +791,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Repos by commit count + velocity
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + velocity
+  insights repos          Most-committed repos with sparklines
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window (default: 91)
 
@@ -814,6 +814,13 @@ COMMANDS
   forge ideas --domain=ai Focus on a specific domain
   forge plan "idea"       Implementation plan for a project idea
 
+  forge                   AI project idea generator
+  forge trending          Trending repos in your stack (Python, TS, Go, Java)
+  forge suggest           Claude generates 3 tailored weekend project ideas
+  forge repos             Your repos by recent activity
+    --lang LANG             Filter to one language
+    --username NAME         GitHub username override
+
   help                    Show this help
 
 SETUP
@@ -834,9 +841,8 @@ EXAMPLES
     kegbot insights heatmap --username torvalds
     kegbot insights repos
     kegbot forge trending
-    kegbot forge ideas
-    kegbot forge ideas --domain=ai
-    kegbot forge plan "a terminal pomodoro timer that logs to JSON"
+    kegbot forge suggest
+    kegbot forge suggest --lang typescript
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

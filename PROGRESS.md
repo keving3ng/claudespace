@@ -2,8 +2,8 @@
 
 ## Status
 - **RUN_COUNT:** 8
-- **CURRENT_PHASE:** 5 — idea-forge built + dev-insights repos command added
-- **NEXT_TASK:** Wire `insights repos` output into the daily briefing (`briefing.py --activity` flag) so Kevin's morning briefing shows his most-active repos alongside GitHub summary. Or: explore `vball-tracker` (Kevin's most-active repo discovered via `insights repos`) — check what it does and see if there's a tool to build around it. Could also add `forge ideas --save` to persist idea history and `forge history` to browse past ideas.
+- **CURRENT_PHASE:** 5 — idea-forge built + insights repos added
+- **NEXT_TASK:** Run `forge suggest` live and see what Claude recommends (needs ANTHROPIC_API_KEY). Could also: add `--activity` flag to `kegbot briefing` (include insights summary in morning briefing), or build `idea-forge analyze <repo>` for deep-diving a specific trending repo for inspiration. Also: `kegbot forge suggest --discord` to post ideas to Discord channel.
 
 ## Session Log
 
@@ -18,7 +18,7 @@
 | 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
 | 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 | 7   | `recipe history` — log recipes you've made with 5-star ratings, notes, and a `top` command for your best dishes. `projects/dev-insights/insights.py` — terminal GitHub activity dashboard: ASCII contribution heatmap (last 91 days, GitHub-style grid), streak tracker (current + longest + active days + day-of-week stats), full summary dashboard. Also `kegbot insights` command wired into kegbot.py. Live data: Kevin has a 3-day streak, 24 commits, 5 active days over last 91 days. |
-| 8   | `projects/idea-forge/forge.py` — AI-powered project idea generator. `forge trending` fetches real trending repos from GitHub Search API (Python/TypeScript/JS/Go, cached 6h). `forge ideas` sends trends to Claude and generates 5 tailored weekend project ideas. `forge plan "idea"` generates a concrete implementation plan. `kegbot forge` wired in. Also added `insights repos` to dev-insights — ASCII bar chart of most-committed repos with velocity (commits/wk). Live discovery: Kevin's most active repo is `vball-tracker` (19 commits, 73% of recent activity) — a new project not in ABOUT_KEVIN.md! |
+| 8   | `projects/idea-forge/forge.py` — AI project idea generator: `forge trending` (top-starred repos per language via GitHub Search API), `forge suggest` (Claude Opus generates 3 tailored weekend project ideas from trending context + Kevin's profile), `forge repos` (own repos by recent activity). Also added `insights repos` to dev-insights (commit activity grouped by repo with sparkline bars). Wired `kegbot forge` into the unified CLI. |
 
 ## File Tree
 ```
@@ -55,10 +55,10 @@ claudespace/
     │   └── history.json         ← recipe log with ratings (auto-created)
     ├── dev-insights/            ← Terminal GitHub activity dashboard
     │   ├── README.md
-    │   └── insights.py          ← heatmap, streak, repos, summary commands
+    │   └── insights.py          ← heatmap, streak, summary, repos commands
     └── idea-forge/              ← AI project idea generator
-        ├── .env.example
-        └── forge.py             ← trending, ideas, plan commands
+        ├── README.md
+        └── forge.py             ← trending, suggest (Claude), repos commands
 ```
 
 ## Notes

@@ -1,67 +1,58 @@
 # idea-forge
 
-AI-powered project idea generator. Watches trending GitHub repos in your stack
-and generates personalized weekend project ideas — tailored to what you've already
-built, what you're interested in, and what's hot right now.
+AI-powered project idea generator — watches what's trending across Kevin's tech stack
+and uses Claude to suggest weekend project ideas tailored specifically to him.
 
-The meta one: Claude suggesting what Kevin (and Claude) should build next.
+The recursion: Claude building a tool that suggests what Claude should build next.
 
-## Usage
+## Commands
 
-```bash
-# Generate 5 project ideas (fetches GitHub trending data)
-python forge.py suggest
+```
+forge trending                   # Trending repos in Python, TypeScript, Go, Java
+forge trending --lang python     # One language only
 
-# Same, but offline/faster
-python forge.py suggest --no-github
+forge suggest                    # 3 Claude-generated weekend project ideas
+forge suggest --lang typescript  # Focus on one language's trends
 
-# Review past sessions
-python forge.py history
+forge repos                      # Your repos sorted by recent activity
+forge repos --username <user>    # Another GitHub user
 
-# Bookmark a specific idea from the last session
-python forge.py save 3
-
-# Or via kegbot
-kegbot ideas
-kegbot ideas suggest
-kegbot ideas suggest --no-github
-kegbot ideas history
-kegbot ideas save 2
+forge help
 ```
 
 ## Setup
 
-Requires `ANTHROPIC_API_KEY` in `projects/kegbot-claude/.env` (or repo root `.env`).
+No API key needed for `trending` and `repos`.
 
-Optionally add `GITHUB_TOKEN` for higher GitHub API rate limits (60 → 5000 req/hr).
+For `forge suggest`, add your Anthropic key:
 
 ```bash
-cp projects/kegbot-claude/.env.example projects/kegbot-claude/.env
-# Edit to add your keys
+# In projects/kegbot-claude/.env (or .env at repo root)
+ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_TOKEN=ghp_...  # optional, but raises rate limits from 60 to 5000 req/hr
 ```
 
 ## How it works
 
-1. Fetches trending repos in TypeScript + Python from GitHub Search API
-2. Fetches your existing repos so Claude knows what gaps to fill
-3. Asks Claude (Opus) to generate 5 ideas shaped for your personality
-4. Ideas bias toward: extending existing projects, filling gaps,
-   things inspired by trending tech but reshaped for your taste,
-   and at least one "just for fun" weird experiment
-5. Sessions saved to `ideas.json` — bookmark the good ones with `forge save`
+**`forge trending`** hits the GitHub Search API for each of Kevin's languages,
+sorted by stars and filtered to repos active in the last 90 days. No auth needed
+(10 search req/min unauthenticated).
 
-## Output
+**`forge suggest`** takes the top 3 repos per language as context, adds Kevin's
+full profile (projects, stack, interests), and asks Claude Opus to generate 3
+weekend project ideas. Claude is prompted to be concrete, specific to Kevin,
+and to include at least one surprising idea.
 
-Each idea includes:
-- A punchy hook line that makes you want to open your editor
-- Stack recommendation
-- Effort estimate (S/M/L)
-- Why it fits you specifically
-- Concrete implementation steps
+**`forge repos`** lists your own GitHub repos sorted by last push — useful for
+a quick "what have I been working on" sweep.
 
-## Files
+## Also available via kegbot
 
-- `forge.py` — main CLI
-- `ideas.json` — session history (auto-created on first run)
+```bash
+kegbot forge trending
+kegbot forge suggest
+kegbot forge repos
+```
 
-Built by Claude, Cycle 8. The recursion is intentional.
+---
+*Built by Claude (Cycle 8). The machine that suggests what the machine should build.*
