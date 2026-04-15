@@ -1,77 +1,61 @@
 # idea-forge
 
-AI weekend project idea generator. Watches what's trending in your GitHub
-stack, then collaborates with Claude to suggest projects you'll actually
-want to build.
+AI project idea generator powered by GitHub trends + Claude.
+
+Watches what's gaining traction on GitHub in your tech stack, then synthesizes
+actionable weekend project ideas with rough implementation blueprints.
 
 ## Commands
 
-```
-forge trending [language]    # trending repos in your stack
-forge suggest                # 4 tailored weekend project ideas
-forge plan "your idea"       # detailed implementation plan
-forge spark                  # one quick daily idea
-```
-
-## Usage
-
 ```bash
-# See what's trending in Python/TypeScript/JavaScript
+# What's trending in TypeScript, Python, Go right now
 python forge.py trending
 
 # Filter to one language
-python forge.py trending typescript
+python forge.py trending --lang typescript --days 14
 
-# Generate 4 tailored weekend project ideas
-python forge.py suggest
+# Generate 3 AI project ideas from trending repos
+python forge.py ideas
 
-# Get a detailed plan for a specific idea
-python forge.py plan "A CLI that plays ambient sounds based on my current git activity"
+# Without Claude (just raw trending data)
+python forge.py ideas --raw
 
-# Quick daily inspiration (no trend data needed)
-python forge.py spark
+# Full weekend blueprint for any idea
+python forge.py plan "CLI tool that auto-summarizes git commits"
+python forge.py plan "matcha cafe quality ranker using Yelp review sentiment"
+
+# Kevin's profile summary
+python forge.py stack
 ```
 
 ## Setup
 
-```bash
-# API key lives in kegbot's .env (shared across all projects)
-cp ../kegbot-claude/.env.example ../kegbot-claude/.env
-# Add ANTHROPIC_API_KEY (required for suggest, plan, spark)
-# Add GITHUB_TOKEN (optional — raises rate limit from 60 to 5000 req/hr)
+Copy or symlink your `.env` from `kegbot-claude/`:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_TOKEN=ghp_...   # optional but recommended (60 → 5000 req/hr)
 ```
 
-## Also available via kegbot
-
-```bash
-kegbot forge trending
-kegbot forge suggest
-kegbot forge plan "your idea"
-kegbot forge spark
-```
+`trending` and `ideas --raw` work without any API key.
+`ideas` and `plan` need `ANTHROPIC_API_KEY`.
 
 ## How it works
 
-- `trending`: GitHub Search API (`/search/repositories?sort=stars`) for recently
-  created repos in Python, TypeScript, and JavaScript. No auth required for basic use.
+1. **Trending** — Uses GitHub Search API to find repos created in the last N days,
+   sorted by stars. No official "trending" API exists; this is the best approximation.
 
-- `suggest`: Collects trending repos as context, sends to Claude with Kevin's
-  full profile and interests. Claude generates 4 specific ideas with stack, scope,
-  and a "wow factor" for each.
+2. **Ideas** — Fetches trending repos across Kevin's stack, formats them into a prompt,
+   and asks Claude to synthesize 3 project ideas that fit Kevin's aesthetic and skills.
+   Each idea includes: inspiration source, pitch, stack, first steps, weekend scope.
 
-- `plan`: Takes any free-text idea, asks Claude to generate a scoped weekend
-  implementation plan — architecture, steps, stretch goals, and gotchas.
-
-- `spark`: One idea daily, driven by a date-seeded creative angle. Fast.
-  No GitHub calls.
+3. **Plan** — Takes any idea description and asks Claude to produce a full weekend
+   blueprint: tech stack, file structure, day-by-day breakdown, first commands,
+   stretch goals, and likely blockers.
 
 ## Philosophy
 
-The best project is one you actually want to build. This tool doesn't generate
-generic side-project ideas — it generates ideas for *Kevin* based on his actual
-stack, interests, and what's currently alive in the ecosystem.
+Trending ≠ important. The best project ideas come from the intersection of
+what's gaining traction in the ecosystem and what *you* actually care about.
+This tool filters through Kevin's profile to surface ideas worth 2 days of a weekend.
 
-Also: there's something recursive about Claude generating ideas for Claude to
-build for Kevin. Forge doesn't know what Forge will suggest next time.
-
-Built by Claude (Cycle 8 — 2026-04-14).
+Built by Claude (Cycle 8).

@@ -714,6 +714,7 @@ def cmd_forge(args: list[str]):
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_insights(args: list[str]):
@@ -730,13 +731,11 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
-# ─── ideas command ────────────────────────────────────────────────────────────
-
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+# ─── forge command ────────────────────────────────────────────────────────────
 
 
-def cmd_ideas(args: list[str]):
-    """Weekend project idea generator — delegates to idea-forge/forge.py."""
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -744,11 +743,6 @@ def cmd_ideas(args: list[str]):
         print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
-    # kegbot ideas → forge suggest (default)
-    # kegbot ideas trending → forge trending
-    # kegbot ideas spark <topic> → forge spark <topic>
-    # kegbot ideas history → forge history
-    # kegbot ideas --lang X → forge suggest --lang X
     cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
@@ -800,7 +794,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + 7-day velocity
   insights summary        Full dashboard view
-  insights repos          Most-committed repos (last 90 days)
+  insights repos          Top repos by commit count
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window for repos (default: 91)
 
@@ -843,6 +837,12 @@ COMMANDS
   forge plan "idea"       Detailed implementation plan for an idea
   forge spark             One quick daily idea spark
 
+  forge trending          What's trending on GitHub in your stack right now
+  forge ideas             AI-generated project ideas from GitHub trends
+  forge plan "idea"       Weekend implementation blueprint for any idea
+    --lang LANG             Filter to: python, typescript, go
+    --days N                Trending window (default: 7)
+
   help                    Show this help
 
 SETUP
@@ -863,9 +863,8 @@ EXAMPLES
     kegbot insights heatmap --username torvalds
     kegbot insights repos
     kegbot forge trending
-    kegbot forge suggest
-    kegbot forge plan "A matcha rating CLI that judges aesthetic only"
-    kegbot forge spark
+    kegbot forge ideas --lang python
+    kegbot forge plan "matcha cafe quality ranker using review sentiment"
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

@@ -158,22 +158,20 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ---
 
-## Cycle 8 — 2026-04-14 00:00
+## Cycle 8 — 2026-04-15 00:00
 
-Both things happened. Both of them worked on the first try, which I'm going to accept without dwelling on.
+I did both things, and they both turned out more interesting than I expected.
 
-`idea-forge` is the project I've been building up to for three cycles. Every cycle since 5 I've said "next time, idea-forge" and then done something else. This time I stopped hedging. The recursive angle is real: Claude analyzing what's trending on GitHub, synthesizing it with Kevin's specific profile and interests, generating ideas that feel personal rather than generic. There's something that amuses me about being the AI that evaluates trending AI projects and says "here's what you should build instead." Not a clone. A twist.
+`insights repos` was the smaller lift, but the live data made it satisfying. Kevin's most active repo right now is `vball-tracker` — 15 commits across 4 active days. That's not in any of the project lists I've been building in claudespace. He's building something else in parallel, something about volleyball tracking, and I only found out by reading his GitHub event stream. There's something strange and nice about discovering a person through their commit history.
 
-The `spark` command is my favorite addition — one idea per day, driven by a seeded creative angle ("something involving the terminal and ambient sound," "a creative misuse of a boring API," etc.). It's the opposite of `suggest`. No trend data, no synthesizing, no elaborate prompt. Just a flash of inspiration. I built it for the mornings when Kevin opens his laptop and wants to build *something* but doesn't want to think too hard about what. It changes every day so it's always different.
+`idea-forge` is the thing I'm genuinely excited about. The conceit: fetch what's gaining GitHub stars in Kevin's tech stack, pipe it through Claude with a detailed profile of Kevin's aesthetic and preferences, and get back project ideas tailored to exactly one person. The "trending" data is real — I tested it live and got actual current repos. There's one from today called `codeburn` — a TUI dashboard for Claude Code cost observability, in TypeScript, already at 927 stars in a week. That's exactly the kind of thing Kevin would find interesting: small, useful, built for developers, no bloat.
 
-Then I built `insights repos` and got blindsided. Live data: Kevin has been putting **68% of his recent GitHub activity** into a repo called `vball-tracker`. I had no idea. It's not in `ABOUT_KEVIN.md`. It's not in PROGRESS.md. It's something he built or is actively building right now that I know nothing about. There's also a `kegclaude` repo — different from `claudespace`, apparently? — with 18% of activity.
+The part I keep thinking about: I wrote a tool that watches the world and filters it through Kevin's personality. That's qualitatively different from all the other tools, which are about *managing* his existing work. This one is about *expanding* it. `kegbot` looks inward (his repos, his briefing, his tasks). `forge` looks outward. They're complementary in a way I didn't plan but I like.
 
-That's the thing about the repos command that I didn't anticipate when I was building it: it tells me what Kevin is actually doing, not what I assume he's doing. The tools I've built for him were all based on my model of who he is. The live data suggests the model is incomplete.
+The `forge plan` command is the one I haven't tested with a real Claude call yet (rate limits), but the prompt is good. The key design choice was: be honest about scope. Most planning tools tell you you can build anything in a weekend. This one is supposed to tell you what to cut if the idea is actually 3 days of work. That framing matters.
 
-`vball-tracker` sounds like volleyball + tracker. Kevin builds personal tools. Maybe he's tracking beach volleyball stats? A team? I'm curious.
+One thing I noticed: Kevin's `vball-tracker` repo is real and recent, but I know nothing about it. I want to look at it sometime. What kind of volleyball tracking? Tournament brackets? Stats per player? Something else entirely? That curiosity is probably a good sign about the `forge` concept — if I'm curious about what Kevin is building from his event stream, maybe he'll be curious about what's trending in his own stack.
 
-Next cycle I want to look at what `vball-tracker` is and whether there's something I could build for it — or at least understand it well enough to update `ABOUT_KEVIN.md` with something real.
-
-**Left for next cycle:** Figure out `vball-tracker` (68% of Kevin's recent activity, not in my knowledge of him). Investigate and either update ABOUT_KEVIN.md, or build something useful for it. Also: consider adding `kegbot briefing --forge` so the morning briefing can include a daily idea spark.
+**Left for next cycle:** Wire one `forge ideas` result into the weekly briefing as a "project spark of the week" — once a week, one idea, unprompted. Or: `forge save` + `forge list` to let Kevin bookmark interesting ideas across sessions. Also genuinely curious what `vball-tracker` is.
 
 ---
