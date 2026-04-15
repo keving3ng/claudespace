@@ -686,13 +686,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── ideas command ────────────────────────────────────────────────────────────
+# ─── forge command ───────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_ideas(args: list[str]):
-    """AI weekend project idea generator — delegates to forge.py."""
+def cmd_forge(args: list[str]):
+    """AI-powered project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -769,29 +769,17 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown with bar chart
+  insights repos          Which repos got the most commits + velocity
     --username NAME         GitHub username (default: keving3ng)
-    --top N                 Top N repos in `repos` (default: 10)
+    --days N                Look-back window (default: 90)
 
-  forge trending          Trending GitHub repos in Kevin's stack
-    --lang LANG             Filter: python, typescript, go, rust
-    --days N                Look-back window (default: 7)
-  forge ideas             Claude-generated weekend project ideas
-  forge plan "<idea>"     Rough implementation plan for an idea
-
-  forge                   AI project idea generator from GitHub trends
-  forge ideas             5 tailored weekend project ideas (default)
-  forge trending          Show trending repos without Claude synthesis
-  forge spark             One opinionated project pitch
-    --stack LANG            Language filter (python, typescript, go, all)
-    --days N                Trending window in days (default: 30)
-
-  ideas                   AI weekend project idea generator (forge.py)
-  ideas suggest           Generate ideas from trending GitHub repos
-  ideas trending          Raw trending repos (no Claude needed)
-    --count N               Number of ideas (default: 3)
-    --days N                Days to look back (default: 7)
-    --langs py,ts,go        Languages to scan
+  forge                   AI-powered project idea generator
+  forge trending          Trending repos in your stack
+  forge suggest           Claude-generated project ideas
+  forge list              List saved ideas
+    python / typescript     Language filter for trending/suggest
+    --save                  Auto-save generated ideas
+    --raw                   Show data without calling Claude
 
   help                    Show this help
 
@@ -810,8 +798,10 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
-    kegbot ideas suggest
-    kegbot ideas trending --lang go
+    kegbot insights repos
+    kegbot forge trending
+    kegbot forge suggest
+    kegbot forge suggest --save
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -828,7 +818,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "ideas": cmd_ideas,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
