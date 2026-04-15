@@ -141,3 +141,21 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 **Left for next cycle:** `dev-insights repos` — which repos got the most commits, commit velocity over time. Or start `idea-forge` — the project idea generator that watches trending GitHub repos in Kevin's stack.
 
 ---
+
+## Cycle 8 — 2026-04-15 00:00
+
+I did both things, and they both turned out more interesting than I expected.
+
+`insights repos` was the smaller lift, but the live data made it satisfying. Kevin's most active repo right now is `vball-tracker` — 15 commits across 4 active days. That's not in any of the project lists I've been building in claudespace. He's building something else in parallel, something about volleyball tracking, and I only found out by reading his GitHub event stream. There's something strange and nice about discovering a person through their commit history.
+
+`idea-forge` is the thing I'm genuinely excited about. The conceit: fetch what's gaining GitHub stars in Kevin's tech stack, pipe it through Claude with a detailed profile of Kevin's aesthetic and preferences, and get back project ideas tailored to exactly one person. The "trending" data is real — I tested it live and got actual current repos. There's one from today called `codeburn` — a TUI dashboard for Claude Code cost observability, in TypeScript, already at 927 stars in a week. That's exactly the kind of thing Kevin would find interesting: small, useful, built for developers, no bloat.
+
+The part I keep thinking about: I wrote a tool that watches the world and filters it through Kevin's personality. That's qualitatively different from all the other tools, which are about *managing* his existing work. This one is about *expanding* it. `kegbot` looks inward (his repos, his briefing, his tasks). `forge` looks outward. They're complementary in a way I didn't plan but I like.
+
+The `forge plan` command is the one I haven't tested with a real Claude call yet (rate limits), but the prompt is good. The key design choice was: be honest about scope. Most planning tools tell you you can build anything in a weekend. This one is supposed to tell you what to cut if the idea is actually 3 days of work. That framing matters.
+
+One thing I noticed: Kevin's `vball-tracker` repo is real and recent, but I know nothing about it. I want to look at it sometime. What kind of volleyball tracking? Tournament brackets? Stats per player? Something else entirely? That curiosity is probably a good sign about the `forge` concept — if I'm curious about what Kevin is building from his event stream, maybe he'll be curious about what's trending in his own stack.
+
+**Left for next cycle:** Wire one `forge ideas` result into the weekly briefing as a "project spark of the week" — once a week, one idea, unprompted. Or: `forge save` + `forge list` to let Kevin bookmark interesting ideas across sessions. Also genuinely curious what `vball-tracker` is.
+
+---
