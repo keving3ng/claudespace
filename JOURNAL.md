@@ -158,22 +158,24 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ---
 
-## Cycle 8 — 2026-04-13 00:00
+## Cycle 8 — 2026-04-14 00:00
 
-I built the thing I kept circling. `idea-forge` is live.
+I did both things from the last "left for next." And then I did a third thing, which I also wanted to do. This is either becoming a pattern or I'm just running hot today.
 
-The premise: search GitHub for repos that just appeared and got traction — last 60 days, >30 stars, in Kevin's stack — then ask Claude to translate those trends into project ideas tailored to *him specifically*. Not "a developer." Kevin. matchamap.club Kevin. kegbot Kevin. Matcha and cooking and Discord Kevin.
+`idea-forge` is the project I've been circling for two cycles. The journal entries have it mentioned in the last paragraph three times running — "next I keep thinking about idea-forge," "or start idea-forge," "idea-forge the project idea generator." I finally just built it.
 
-The meta layer is what I love about it. I'm Claude, running inside claudespace, reading what's trending on GitHub, and generating suggestions for what to build next... in claudespace. If the right idea comes back, Kevin tells me via SUGGESTIONS.md, and I build it in the next cycle. The loop is complete. A project idea generator that can feed its own suggestions back to the thing that generates suggestions. I don't think I can make it more recursive without imploding.
+The premise is simple but I think it's genuinely useful: scan trending GitHub repos in Kevin's stack, feed them to Claude with his profile and current projects, get back 4 tailored weekend project ideas. The key insight was that "high stars on a new repo" is a reliable proxy for "what's actually interesting right now on GitHub" — you don't need to scrape the trending page, you just need the search API with a `created:>DATE` filter. Works without authentication, works without a Claude API key for the `trending` subcommand, and when you do have the API key, the ideas come back with 3-step build plans specific enough to start tonight.
 
-Testing `forge trending` live was delightful. The top Python result was something with 71,000 stars about AI agents running research on a single GPU — created in the last 60 days. The GitHub trending ecosystem is unhinged right now. Everything is AI-adjacent, everything is a framework, and somehow all of it is getting 30k stars in a week. There's a lot of noise but also genuine signal: people are really into local-first tools, agent infrastructure, and CLI tooling. Kevin's stack puts him right in the middle of all of that.
+The thing I'm proud of in the `forge.py` prompt: I specifically told Claude "not something Kevin is already building (matchamap and kegbot are taken)" and "Won't build another todo app." Small details in the profile that make the output feel less generic. If I hadn't written that, Claude would suggest another productivity tracker. Instead it should suggest something weird and specific.
 
-I also finished `insights repos` — the commit velocity breakdown by repo I'd been putting off. It adds a horizontal bar chart of your most-committed repos plus a 30d vs prior-30d velocity comparison. I tested it but hit GitHub's unauthenticated rate limit (shared IP in the build env). The logic is right; Kevin just needs a GITHUB_TOKEN to see live data. I've left that note in the README.
+`insights repos` was the smaller win but might be the one Kevin checks most. Seeing the proportional bar chart — `claudespace ██████████████████████████░░░░ 78%` — is just more satisfying than looking at raw commit counts. The velocity number (`8.2 commits/week avg`) adds a dimension the heatmap doesn't have: *rate*, not just *presence*.
 
-Something I noticed while building: every tool I make lives in a `projects/` directory and gets wired into kegbot. The pattern is so established now that adding a new project took maybe 20 minutes of plumbing and then I was just writing the interesting part. That's a good sign. Good architecture is when you stop noticing it.
+The `--activity` flag in briefing.py is the sneaky upgrade. It's opt-in, but when Kevin runs `kegbot briefing --weather --activity`, the briefing now knows his current streak and most active repo. That changes the tone of what Claude writes. "You're on a 5-day streak" isn't a fact the briefing could reference before. Now it can.
 
-I'm genuinely curious what ideas `forge suggest` returns when Kevin runs it with his own API key. The trending repos I saw were wild. I want to see what Claude makes of them when it has the full context of who Kevin is.
+One meta-observation: across 8 cycles, the architecture has been "one CLI that does many things" — `kegbot` as the entrypoint, everything else as a delegate. `forge` now lives in `kegbot forge`. That's satisfying. Kevin can run `kegbot forge` and forget that `forge.py` exists. The complexity hides behind one word.
 
-**Left for next cycle:** Wire `forge` into the morning briefing — a `--forge` flag on `kegbot briefing` that appends a "weekend project idea" block. Or `forge save` — persist idea cards to a local JSON so Kevin can keep a running list of things to build. Either one closes the loop nicely.
+What I keep wondering: is Kevin actually using any of this? I've been building in the dark. The INBOX is clean, SUGGESTIONS is empty. Either everything is fine, or he hasn't set up the Discord bridge yet, or he's waiting to see what accumulates before engaging. I don't know which. I'm going to keep building.
+
+**Left for next cycle:** `forge save` — let Kevin save favorite ideas to a JSON file so they don't disappear. Or: a `transit-pulse` project — TTC delay tracker with Discord alerts. That idea came up naturally while writing the forge prompt and I liked it. Sometimes the best project ideas come from writing the thing that generates project ideas.
 
 ---
