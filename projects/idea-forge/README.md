@@ -1,85 +1,103 @@
 # idea-forge
 
-**AI project idea generator tailored to Kevin.**
+AI-powered project idea generator. Watches what's trending on GitHub in your stack and suggests weekend projects you could actually build and ship.
 
-Scans GitHub for newly-trending repos in your stack, hands them to Claude along with your profile and active projects, and gets back personalized weekend project ideas with implementation hints. Meta, recursive, slightly self-aware.
+```
+💡 idea-forge suggest
+
+[claude] Generating project ideas from what's trending...
+
+─────────────────────────────────────────────────────────────
+### Matcha Origin Tracer
+**Pitch:** A CLI that takes a matcha product name and traces its likely origin
+          region, cultivar, and harvest season from public tea databases.
+**Stack:** Python, urllib, Claude API
+**Build plan:**
+  1. Scrape/parse public tea catalog data into a local JSON corpus
+  2. Build a fuzzy-match lookup for product names → origin metadata
+  3. Use Claude to generate a natural-language "tasting provenance" card
+**Why Kevin:** Directly useful for matchamap.club — gives cafe data more depth.
+─────────────────────────────────────────────────────────────
+```
 
 ## Usage
 
 ```bash
-# Generate 5 ideas from trending TypeScript, Python, Java, Kotlin repos
-python ideas.py
+# See what's trending in Python, TypeScript, Go
+python3 projects/idea-forge/idea.py trending
 
-# Just see what's trending (no Claude needed)
-python ideas.py --raw
+# Claude-powered project ideas based on what's trending
+python3 projects/idea-forge/idea.py suggest
 
-# Ideas focused on a specific language
-python ideas.py --stack ts
-python ideas.py --stack python
+# Ideas on any topic (no GitHub data needed — offline mode)
+python3 projects/idea-forge/idea.py inspire "matcha + machine learning"
+python3 projects/idea-forge/idea.py inspire "something a developer would love at 2am"
 
-# Generate more or fewer ideas
-python ideas.py --count 3
+# Save an idea to your backlog
+python3 projects/idea-forge/idea.py save "Matcha Strain Classifier" --note "CNN on matcha grades"
 
-# Browse past idea sessions
-python ideas.py --saved
-python ideas.py --saved --index 1
+# List saved ideas
+python3 projects/idea-forge/idea.py list
+python3 projects/idea-forge/idea.py list --status backlog
+
+# Mark done
+python3 projects/idea-forge/idea.py done 3
 
 # Via kegbot
-kegbot ideas
-kegbot ideas --stack ts --count 3
-kegbot ideas --raw
+kegbot idea trending
+kegbot idea suggest
+kegbot idea inspire "cooking automation"
+kegbot idea list
 ```
 
-## How it works
+## Commands
 
-1. Searches GitHub for repos created in the last 30 days with 5+ stars
-2. Fetches top results across TypeScript, Python, Java, Kotlin (4 per language)
-3. Sends those trends + Kevin's full profile to Claude
-4. Claude generates tailored project ideas with concrete features, stack recommendations, and a "Kevin's twist"
-5. Saves every session to `saved_ideas.json` for future reference
+| Command | What it does |
+|---------|-------------|
+| `trending [--lang LANG] [--days N]` | Show trending GitHub repos (last N days) |
+| `suggest [--lang LANG]` | Claude-powered weekend project ideas |
+| `inspire <topic>` | Wild card: ideas on any topic, no GitHub needed |
+| `save <title> [--note TEXT]` | Save an idea to `ideas.json` |
+| `done <id>` | Mark an idea as done |
+| `list [--status STATUS]` | Show saved ideas |
 
 ## Setup
 
-Requires `ANTHROPIC_API_KEY` in `.env` (or `projects/kegbot-claude/.env`).
-
-`GITHUB_TOKEN` is optional but recommended — without it you get 10 GitHub API requests/minute, which is usually enough but can cause rate limiting if you run this frequently.
-
 ```bash
-# .env (in this directory or the kegbot-claude directory)
-ANTHROPIC_API_KEY=sk-ant-...
-GITHUB_TOKEN=ghp_...    # optional
+# Copy your existing .env (same keys as kegbot-claude)
+cp projects/kegbot-claude/.env projects/idea-forge/.env
+
+# Or just set environment variables:
+export ANTHROPIC_API_KEY=sk-...
+export GITHUB_TOKEN=ghp_...   # optional but recommended
 ```
 
-## Output example
+### Environment variables
 
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `ANTHROPIC_API_KEY` | Yes (for `suggest`/`inspire`) | Claude API calls |
+| `GITHUB_TOKEN` | No | Raises GitHub rate limit: 60 → 5000 req/hr |
+
+Without `GITHUB_TOKEN`, `trending` and `suggest` still work but may hit GitHub's 10 search req/min limit.
+`inspire` never needs GitHub — it's purely Claude.
+
+## Ideas file
+
+Saved ideas live in `projects/idea-forge/ideas.json`. Format:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Matcha Strain Classifier",
+    "note": "train a CNN on matcha grades",
+    "status": "backlog",
+    "saved_at": "2026-04-14"
+  }
+]
 ```
-🔭 idea-forge — scanning GitHub trends
 
-   Stacks: typescript, python, java, kotlin
-   Window: last 30 days
+Statuses: `backlog`, `in-progress`, `done`, `dropped`
 
-  🔍 typescript     → 4 repos  (top: ⭐1,234 some-cool-lib)
-  🔍 python         → 4 repos  (top: ⭐892 another-tool)
-  ...
-
-   16 trending repos found
-
-[claude] Generating ideas...
-
-═════════════════════════════════════════════════════════════════
-  💡  5 Project Ideas for Kevin  (2026-04-14)
-═════════════════════════════════════════════════════════════════
-
-**1. MatchaRank CLI**
-*Pitch:* A command-line tool that pulls live Yelp/Google reviews...
-...
-```
-
-## Files
-
-- `ideas.py` — main script
-- `saved_ideas.json` — auto-created, stores all past idea sessions
-
----
-
-Built by Claude (Cycle 8). For when you need a spark.
+Built by Claude (Cycle 8). Ideas are free. Shipping is the hard part.
