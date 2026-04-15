@@ -92,8 +92,22 @@ def _fetch_events_full(
     per-repo breakdown: {repo_full_name: {date: count}}.
     GitHub Events API returns up to 300 events across 3 pages.
     """
+    commit_counts, _ = fetch_push_events_full(username, days=days)
+    return commit_counts
+
+
+def fetch_push_events_full(
+    username: str, days: int = 90
+) -> tuple[dict[date, int], dict[str, int]]:
+    """
+    Fetch PushEvent data for a user.
+    Returns:
+        commit_counts — {date: total_commit_count}
+        repo_counts   — {repo_full_name: total_commit_count}
+    """
+    cutoff = date.today() - timedelta(days=days)
     commit_counts: dict[date, int] = defaultdict(int)
-    repo_counts: dict[str, dict[date, int]] = defaultdict(lambda: defaultdict(int))
+    repo_counts: dict[str, int] = defaultdict(int)
 
     for page in range(1, 4):  # max 3 pages = 300 events
         url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
@@ -114,77 +128,15 @@ def _fetch_events_full(
                 reached_cutoff = True
                 continue
             num_commits = len(event.get("payload", {}).get("commits", []))
-            count = max(num_commits, 1)
-            commit_counts[event_date] += count
+            n = max(num_commits, 1)  # at least 1 per push
+            commit_counts[event_date] += n
             repo_name = event.get("repo", {}).get("name", "unknown")
-            repo_counts[repo_name][event_date] += count
+            repo_counts[repo_name] += n
 
         if reached_cutoff:
             break
 
-    return dict(commit_counts), {k: dict(v) for k, v in repo_counts.items()}
-
-
-def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
-    """
-    Fetch PushEvent data for a user, returning {date: commit_count} for the
-    last `days` days. GitHub Events API gives up to 300 events across 3 pages.
-    """
-    date_counts, _ = _fetch_events_full(username, days)
-    return date_counts
-
-
-def fetch_push_events_by_repo(
-    username: str, days: int = 90
-) -> dict[str, dict[date, int]]:
-    """Return {repo_full_name: {date: commit_count}} for the last `days` days."""
-    _, repo_counts = _fetch_events_full(username, days)
-    return repo_counts
-
-
-def fetch_push_events_by_repo(username: str, days: int = 90) -> dict[str, dict]:
-    """
-    Fetch PushEvent data grouped by repo, returning:
-      {repo_full_name: {"commits": N, "pushes": N, "last_push": date}}
-    """
-    cutoff = date.today() - timedelta(days=days)
-    repo_stats: dict[str, dict] = defaultdict(
-        lambda: {"commits": 0, "pushes": 0, "last_push": None}
-    )
-
-    for page in range(1, 4):
-        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
-        events = _github_request(url)
-        if not events or not isinstance(events, list):
-            break
-
-        reached_cutoff = False
-        for event in events:
-            if event.get("type") != "PushEvent":
-                continue
-            created_at = event.get("created_at", "")
-            try:
-                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
-            except ValueError:
-                continue
-            if event_date < cutoff:
-                reached_cutoff = True
-                continue
-
-            repo_name = event.get("repo", {}).get("name", "unknown")
-            num_commits = len(event.get("payload", {}).get("commits", []))
-            num_commits = max(num_commits, 1)
-
-            repo_stats[repo_name]["commits"] += num_commits
-            repo_stats[repo_name]["pushes"] += 1
-            last = repo_stats[repo_name]["last_push"]
-            if last is None or event_date > last:
-                repo_stats[repo_name]["last_push"] = event_date
-
-        if reached_cutoff:
-            break
-
-    return dict(repo_stats)
+    return dict(commit_counts), dict(repo_counts)
 
 
 def fetch_user_info(username: str) -> dict | None:
@@ -494,53 +446,49 @@ def cmd_summary(args: list[str]):
 
 
 def cmd_repos(args: list[str]):
-    """Show commit breakdown by repository over the last 90 days."""
+    """Show per-repo commit breakdown for the last 91 days."""
     username = get_username(args)
-    days = 90
+    days = 91
 
     print(f"📦 Fetching repo activity for @{username}...")
-    repo_stats = fetch_push_events_by_repo(username, days=days)
+    _, repo_counts = fetch_push_events_full(username, days=days)
 
-    if not repo_stats:
+    if not repo_counts:
         print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        print("   (GitHub API only returns public events, and only the last ~300)")
         return
 
-    # Sort by commit count descending
-    sorted_repos = sorted(repo_stats.items(), key=lambda x: x[1]["commits"], reverse=True)
-    total_commits = sum(s["commits"] for _, s in sorted_repos)
-    max_commits = sorted_repos[0][1]["commits"] if sorted_repos else 1
-
-    print(f"\n📦 Repo Commit Breakdown — @{username} (last {days} days)\n")
-    print(f"{'Repository':<40} {'Commits':>7}  {'Bar'}")
-    print("─" * 70)
-
-    bar_width = 24
-    for repo_name, stats in sorted_repos:
-        commits = stats["commits"]
-        pushes = stats["pushes"]
-        last = stats["last_push"]
-        last_str = last.strftime("%b %d") if last else "?"
-
-        # Short name: strip username prefix if it's Kevin's own repo
-        display = repo_name.split("/")[-1] if "/" in repo_name else repo_name
-        if len(display) > 38:
-            display = display[:35] + "..."
-
-        # ASCII bar
-        bar_len = max(1, round((commits / max_commits) * bar_width))
-        bar = "█" * bar_len
-
-        push_str = f"({pushes} push{'es' if pushes != 1 else ''})"
-        print(f"  {display:<38} {commits:>5}   {bar}  {push_str}  last {last_str}")
-
-    print("─" * 70)
-    print(f"  {'TOTAL':<38} {total_commits:>5}   across {len(sorted_repos)} repo(s)")
-    print()
-
-    # Commit velocity: commits per week
+    sorted_repos = sorted(repo_counts.items(), key=lambda x: x[1], reverse=True)
+    total_commits = sum(v for v in repo_counts.values())
     weeks = days / 7
-    velocity = round(total_commits / weeks, 1)
-    print(f"  Velocity: ~{velocity} commits/week over the last {days} days")
+    max_commits = sorted_repos[0][1] if sorted_repos else 1
+
+    print(f"\n📦 Repository Activity — @{username} (last ~{days} days)\n")
+
+    header = f"  {'Repository':<38}  {'Commits':>7}  {'Wk avg':>6}  Distribution"
+    print(header)
+    print("  " + "─" * 72)
+
+    for repo_full, count in sorted_repos:
+        # Show just the repo name (strip owner prefix)
+        short = repo_full.split("/")[-1] if "/" in repo_full else repo_full
+        velocity = count / weeks
+        bar_len = max(1, int((count / max_commits) * 20))
+        bar = "█" * bar_len + "░" * (20 - bar_len)
+        share_pct = (count / total_commits * 100) if total_commits else 0
+        print(
+            f"  {short:<38}  {count:>7}  {velocity:>5.1f}/w  {bar} {share_pct:>3.0f}%"
+        )
+
+    print()
+    print(f"  Total: {total_commits} commit(s) across {len(sorted_repos)} repo(s)")
+
+    if sorted_repos:
+        top_repo = sorted_repos[0][0].split("/")[-1]
+        top_count = sorted_repos[0][1]
+        top_velocity = top_count / weeks
+        print(f"\n  🏆 Most active: {top_repo}  ({top_count} commits, {top_velocity:.1f}/wk avg)")
+
     print()
 
 
@@ -556,7 +504,7 @@ COMMANDS
 
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
-  repos                      Per-repo commit breakdown with velocity trend
+  repos                      Per-repo commit breakdown + velocity
   summary                    Full dashboard: heatmap + streak + stats
   repos                      Commit breakdown by repository (last 90 days)
 
@@ -574,7 +522,7 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights repos
-    insights repos --days 30
+    insights repos -u keving3ng
     insights summary -u keving3ng
     insights repos
     insights repos --username keving3ng

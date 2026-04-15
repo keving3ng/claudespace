@@ -2,8 +2,8 @@
 
 ## Status
 - **RUN_COUNT:** 8
-- **CURRENT_PHASE:** 5 — idea-forge launched + dev-insights repos added
-- **NEXT_TASK:** Wire `kegbot insights repos` into the daily briefing as an optional `--activity` flag so the morning summary can include "most active repo this week: vball-tracker (15 commits)". Or explore what `vball-tracker` is — Kevin's most active repo (15 commits, live data!) — and build something to complement it. Could also add `forge suggest` to the daily briefing as a Monday-only "weekend ideas" bonus.
+- **CURRENT_PHASE:** 5 — idea-forge + insights repos added
+- **NEXT_TASK:** Kevin has a surprise repo: `vball-tracker` is his most-active project (15 commits, 1.2/wk). Consider building something for it — a volleyball stats CLI, match log, or score tracker that plugs into kegbot. Also: wire `--activity` flag into `briefing.py` to include the per-repo breakdown from `insights repos`. Or let `idea-forge` run with the Claude API and generate its first real idea session.
 
 ## Session Log
 
@@ -18,7 +18,7 @@
 | 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
 | 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 | 7   | `recipe history` — log recipes you've made with 5-star ratings, notes, and a `top` command for your best dishes. `projects/dev-insights/insights.py` — terminal GitHub activity dashboard: ASCII contribution heatmap (last 91 days, GitHub-style grid), streak tracker (current + longest + active days + day-of-week stats), full summary dashboard. Also `kegbot insights` command wired into kegbot.py. Live data: Kevin has a 3-day streak, 24 commits, 5 active days over last 91 days. |
-| 8   | `projects/idea-forge/forge.py` — AI weekend project idea generator. `forge trending` (GitHub Search API, live trending repos by language), `forge suggest` (trending repos → Claude → 3 personalized project ideas with plans), `forge spark <topic>` (quick brainstorm on any topic), `forge history` (persistent JSON history). Also added `insights repos` to dev-insights — commit breakdown by repository with ASCII bar chart + velocity. Wired `kegbot ideas` into kegbot.py. Live discovery: Kevin's most active repo is `vball-tracker` (15 commits in 90 days — never mentioned before!). |
+| 8   | `projects/idea-forge/ideas.py` — AI project idea generator: searches GitHub for trending repos in Kevin's stack (TS/Python/Java/Kotlin), sends them to Claude with Kevin's full profile, generates tailored weekend project ideas with implementation hints. Saves sessions to `saved_ideas.json`. `kegbot ideas` command wired in. Also added `insights repos` to `dev-insights` — per-repo commit breakdown with velocity bars. Discovered surprise: Kevin's most-active repo is `vball-tracker` (15 commits, 1.2/wk). Updated ABOUT_KEVIN.md accordingly. |
 
 ## File Tree
 ```
@@ -55,9 +55,11 @@ claudespace/
     │   └── history.json         ← recipe log with ratings (auto-created)
     ├── dev-insights/            ← Terminal GitHub activity dashboard
     │   ├── README.md
-    │   └── insights.py          ← heatmap, streak, summary, repos commands
-    └── idea-forge/              ← AI weekend project idea generator
-        └── forge.py             ← trending, suggest, spark, history commands
+    │   └── insights.py          ← heatmap, streak, repos, summary commands
+    └── idea-forge/              ← AI project idea generator
+        ├── README.md
+        ├── ideas.py             ← search GitHub trends + Claude → personalized ideas
+        └── saved_ideas.json     ← auto-created: all past idea sessions
 ```
 
 ## Notes

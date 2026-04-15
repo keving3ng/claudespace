@@ -1,58 +1,85 @@
 # idea-forge
 
-AI-powered project idea generator — watches what's trending across Kevin's tech stack
-and uses Claude to suggest weekend project ideas tailored specifically to him.
+**AI project idea generator tailored to Kevin.**
 
-The recursion: Claude building a tool that suggests what Claude should build next.
+Scans GitHub for newly-trending repos in your stack, hands them to Claude along with your profile and active projects, and gets back personalized weekend project ideas with implementation hints. Meta, recursive, slightly self-aware.
 
-## Commands
-
-```
-forge trending                   # Trending repos in Python, TypeScript, Go, Java
-forge trending --lang python     # One language only
-
-forge suggest                    # 3 Claude-generated weekend project ideas
-forge suggest --lang typescript  # Focus on one language's trends
-
-forge repos                      # Your repos sorted by recent activity
-forge repos --username <user>    # Another GitHub user
-
-forge help
-```
-
-## Setup
-
-No API key needed for `trending` and `repos`.
-
-For `forge suggest`, add your Anthropic key:
+## Usage
 
 ```bash
-# In projects/kegbot-claude/.env (or .env at repo root)
-ANTHROPIC_API_KEY=sk-ant-...
-GITHUB_TOKEN=ghp_...  # optional, but raises rate limits from 60 to 5000 req/hr
+# Generate 5 ideas from trending TypeScript, Python, Java, Kotlin repos
+python ideas.py
+
+# Just see what's trending (no Claude needed)
+python ideas.py --raw
+
+# Ideas focused on a specific language
+python ideas.py --stack ts
+python ideas.py --stack python
+
+# Generate more or fewer ideas
+python ideas.py --count 3
+
+# Browse past idea sessions
+python ideas.py --saved
+python ideas.py --saved --index 1
+
+# Via kegbot
+kegbot ideas
+kegbot ideas --stack ts --count 3
+kegbot ideas --raw
 ```
 
 ## How it works
 
-**`forge trending`** hits the GitHub Search API for each of Kevin's languages,
-sorted by stars and filtered to repos active in the last 90 days. No auth needed
-(10 search req/min unauthenticated).
+1. Searches GitHub for repos created in the last 30 days with 5+ stars
+2. Fetches top results across TypeScript, Python, Java, Kotlin (4 per language)
+3. Sends those trends + Kevin's full profile to Claude
+4. Claude generates tailored project ideas with concrete features, stack recommendations, and a "Kevin's twist"
+5. Saves every session to `saved_ideas.json` for future reference
 
-**`forge suggest`** takes the top 3 repos per language as context, adds Kevin's
-full profile (projects, stack, interests), and asks Claude Opus to generate 3
-weekend project ideas. Claude is prompted to be concrete, specific to Kevin,
-and to include at least one surprising idea.
+## Setup
 
-**`forge repos`** lists your own GitHub repos sorted by last push — useful for
-a quick "what have I been working on" sweep.
+Requires `ANTHROPIC_API_KEY` in `.env` (or `projects/kegbot-claude/.env`).
 
-## Also available via kegbot
+`GITHUB_TOKEN` is optional but recommended — without it you get 10 GitHub API requests/minute, which is usually enough but can cause rate limiting if you run this frequently.
 
 ```bash
-kegbot forge trending
-kegbot forge suggest
-kegbot forge repos
+# .env (in this directory or the kegbot-claude directory)
+ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_TOKEN=ghp_...    # optional
 ```
 
+## Output example
+
+```
+🔭 idea-forge — scanning GitHub trends
+
+   Stacks: typescript, python, java, kotlin
+   Window: last 30 days
+
+  🔍 typescript     → 4 repos  (top: ⭐1,234 some-cool-lib)
+  🔍 python         → 4 repos  (top: ⭐892 another-tool)
+  ...
+
+   16 trending repos found
+
+[claude] Generating ideas...
+
+═════════════════════════════════════════════════════════════════
+  💡  5 Project Ideas for Kevin  (2026-04-14)
+═════════════════════════════════════════════════════════════════
+
+**1. MatchaRank CLI**
+*Pitch:* A command-line tool that pulls live Yelp/Google reviews...
+...
+```
+
+## Files
+
+- `ideas.py` — main script
+- `saved_ideas.json` — auto-created, stores all past idea sessions
+
 ---
-*Built by Claude (Cycle 8). The machine that suggests what the machine should build.*
+
+Built by Claude (Cycle 8). For when you need a spark.

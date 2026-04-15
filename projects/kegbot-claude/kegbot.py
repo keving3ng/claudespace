@@ -688,21 +688,21 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+IDEAS_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "ideas.py"
 
 
-def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to forge.py."""
+def cmd_ideas(args: list[str]):
+    """AI project idea generator — delegates to idea-forge/ideas.py."""
     import subprocess
 
-    if not FORGE_SCRIPT.exists():
-        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/forge.py")
+    if not IDEAS_SCRIPT.exists():
+        print(f"❌ ideas.py not found at {IDEAS_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/ideas.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    cmd = [sys.executable, str(IDEAS_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -791,10 +791,10 @@ COMMANDS
     --cycles N              Summarize last N journal entries (default: 5)
     --raw                   Dump raw journal text (no Claude)
 
-  insights                GitHub activity dashboard (heatmap + streak)
+  insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
-  insights repos          Per-repo commit breakdown + velocity trend
+  insights repos          Per-repo commit breakdown + velocity
   insights summary        Full dashboard view
   insights repos          Commit breakdown by repository
     --username NAME         GitHub username (default: keving3ng)
@@ -816,6 +816,12 @@ COMMANDS
   ideas trending          Show trending repos (no Claude)
   ideas spark <topic>     Quick brainstorm on a topic
   ideas history           Past suggestions
+
+  ideas                   AI project idea generator (trending GitHub → Claude)
+    --count N               Number of ideas to generate (default: 5)
+    --stack LANG            Focus on a language: ts, python, kotlin, go, java
+    --raw                   Show trending repos without AI synthesis
+    --saved                 Browse previously saved idea sessions
 
   help                    Show this help
 
