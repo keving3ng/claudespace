@@ -11,6 +11,7 @@ Usage:
     python briefing.py --days 3          # Look back 3 days of GitHub history
     python briefing.py --no-github       # Skip GitHub, vibes-only mode
     python briefing.py --username alice  # Different GitHub username
+    python briefing.py --ideas           # Append one fresh project idea (forge spark)
 """
 
 import argparse
@@ -249,6 +250,39 @@ def fetch_weather_summary(location: str = "Toronto") -> str:
         return ""
 
 
+# ─── Spark idea ───────────────────────────────────────────────────────────────
+
+
+def fetch_spark_idea() -> str:
+    """
+    Generate one quick project idea via Claude — no trending data, pure profile.
+    Fast and suitable for appending to the morning briefing.
+    Falls back to a day-of-week curated line if no API key.
+    """
+    forge_script = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+    if not forge_script.exists():
+        return ""
+
+    import subprocess
+    try:
+        result = subprocess.run(
+            [sys.executable, str(forge_script), "spark"],
+            capture_output=True, text=True, timeout=40,
+        )
+        out = result.stdout.strip()
+        # Strip the leading "💡 Today's spark (...):\n" header so we get just the idea
+        lines = out.splitlines()
+        if lines and lines[0].startswith("💡 Today's spark"):
+            lines = lines[1:]  # drop header line
+        # Drop blank leading lines
+        while lines and not lines[0].strip():
+            lines = lines[1:]
+        return "\n".join(lines).strip()
+    except Exception as e:
+        print(f"[ideas] Could not fetch spark: {e}", file=sys.stderr)
+        return ""
+
+
 # ─── Claude API ───────────────────────────────────────────────────────────────
 
 
@@ -358,6 +392,7 @@ def main() -> int:
     parser.add_argument("--weather", action="store_true", help="Include current weather in briefing")
     parser.add_argument("--location", default="Toronto", help="Weather location (default: Toronto)")
     parser.add_argument("--activity", action="store_true", help="Include 91-day commit streak + top repo in briefing")
+    parser.add_argument("--ideas", action="store_true", help="Append one fresh project idea to the briefing")
     args = parser.parse_args()
 
     print("🍵 kegbot-claude — morning briefing\n")
@@ -398,15 +433,29 @@ def main() -> int:
         activity_summary=activity_summary,
     )
 
-    # 5. Print
+    # 5. Spark idea (optional)
+    spark = ""
+    if args.ideas:
+        print("[ideas] Fetching today's spark idea...")
+        spark = fetch_spark_idea()
+        if spark:
+            print("[ideas] Got one.")
+
+    # 6. Print
     print("\n" + "─" * 60)
     print(briefing)
+    if spark:
+        print("\n💡 **Today's Build Idea:**")
+        print(spark)
     print("─" * 60 + "\n")
 
-    # 6. Discord
+    # 7. Discord
     if args.discord:
         print("[discord] Posting...")
-        post_to_discord(f"☀️ **Morning Briefing**\n\n{briefing}")
+        discord_body = f"☀️ **Morning Briefing**\n\n{briefing}"
+        if spark:
+            discord_body += f"\n\n💡 **Today's Build Idea:**\n{spark}"
+        post_to_discord(discord_body)
         print("[discord] Done.")
 
     return 0

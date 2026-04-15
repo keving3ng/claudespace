@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# kegbot — Kevin's personal assistant CLI, runnable from anywhere.
+#
+# To install (add to your PATH):
+#   Option 1 — symlink into a bin directory already in $PATH:
+#     ln -sf "$(pwd)/scripts/kegbot" ~/.local/bin/kegbot
+#
+#   Option 2 — add the scripts/ directory to your $PATH in ~/.zshrc or ~/.bashrc:
+#     export PATH="$PATH:/path/to/claudespace/scripts"
+#
+#   Option 3 — one-liner alias (add to ~/.zshrc):
+#     alias kegbot='python3 /path/to/claudespace/projects/kegbot-claude/kegbot.py'
+#
+# After installing, reload your shell: source ~/.zshrc (or open a new terminal)
+# Then: kegbot help
+
+set -euo pipefail
+
+# Resolve the real location of this script, even if called through a symlink
+SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")"
+SCRIPTS_DIR="$(dirname "$SCRIPT_PATH")"
+REPO_ROOT="$(dirname "$SCRIPTS_DIR")"
+KEGBOT_PY="$REPO_ROOT/projects/kegbot-claude/kegbot.py"
+
+if [[ ! -f "$KEGBOT_PY" ]]; then
+    echo "❌ kegbot.py not found at: $KEGBOT_PY" >&2
+    echo "   Make sure this script lives in claudespace/scripts/" >&2
+    exit 1
+fi
+
+exec python3 "$KEGBOT_PY" "$@"

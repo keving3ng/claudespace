@@ -1,9 +1,9 @@
 # Build Session Progress
 
 ## Status
-- **RUN_COUNT:** 8
-- **CURRENT_PHASE:** 5 — idea-forge built, dev-insights repos added
-- **NEXT_TASK:** Update `docs/ABOUT_KEVIN.md` with discovered project `vball-tracker` (Kevin's most-active repo with 15 commits recently — he plays volleyball?). Then: add `kegbot ideas` to the morning briefing as an optional `--ideas` flag that appends one fresh project idea. Or start the `kegbot` CLI tool shim / shell alias so Kevin can run it from anywhere without specifying the full path.
+- **RUN_COUNT:** 9
+- **CURRENT_PHASE:** 6 — forge spark, briefing --ideas, kegbot launcher, vball-stats
+- **NEXT_TASK:** Wire `kegbot vball` into ABOUT_KEVIN.md once Kevin replies about what `vball-tracker` actually does (Q2 in INBOX is still open). Meanwhile: consider adding `vball` shell launcher to `scripts/` alongside `kegbot`. Or build `recipe ai` integration with Claude streaming. Or start `kevin-tools / kt` — the grand unified launcher that wraps kegbot + recipe + vball + all projects in one alias.
 
 ## Session Log
 
@@ -19,6 +19,7 @@
 | 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 | 7   | `recipe history` — log recipes you've made with 5-star ratings, notes, and a `top` command for your best dishes. `projects/dev-insights/insights.py` — terminal GitHub activity dashboard: ASCII contribution heatmap (last 91 days, GitHub-style grid), streak tracker (current + longest + active days + day-of-week stats), full summary dashboard. Also `kegbot insights` command wired into kegbot.py. Live data: Kevin has a 3-day streak, 24 commits, 5 active days over last 91 days. |
 | 8   | `insights repos` — new command in dev-insights showing per-repo commit counts, weekly velocity bars, commit velocity trend (accelerating/slowing/steady). `projects/idea-forge/idea_forge.py` — AI project idea generator: fetches trending GitHub repos in Kevin's stack (Python, TypeScript, Go), uses Claude to synthesize 5 weekend project ideas tailored to Kevin's profile. Also `kegbot ideas` command wired into kegbot.py. Live data: Kevin's most active repo is `vball-tracker` (15 commits, 8-day span) — that's new! |
+| 9   | `forge spark` in `forge.py` — lightweight one-idea generator (no trending fetch, fast, offline fallback). `kegbot briefing --ideas` — appends a fresh project idea to the morning briefing. `scripts/kegbot` — shell launcher so `kegbot` is runnable from anywhere with a symlink or PATH add. `projects/vball-stats/vball.py` — standalone volleyball game log: `vball log`, `vball stats`, `vball streak`, `vball history`, `vball undo`. Also `kegbot vball` wired in. |
 
 ## File Tree
 ```
@@ -56,8 +57,11 @@ claudespace/
     ├── dev-insights/            ← Terminal GitHub activity dashboard
     │   ├── README.md
     │   └── insights.py          ← heatmap, streak, summary, repos commands
-    └── idea-forge/              ← AI project idea generator
-        └── idea_forge.py        ← trending, suggest commands
+    ├── idea-forge/              ← AI project idea generator
+    │   ├── idea_forge.py        ← trending, suggest commands
+    │   └── forge.py             ← ideas, browse, spark commands (with ideas.json persistence)
+    └── vball-stats/             ← Volleyball game log & stats
+        └── vball.py             ← log, stats, streak, history, undo
 ```
 
 ## Notes

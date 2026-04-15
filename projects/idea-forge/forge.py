@@ -316,6 +316,56 @@ def cmd_ideas(args: list[str]):
         print()
 
 
+def cmd_spark(args: list[str]):
+    """
+    Generate ONE quick project idea without fetching trending repos.
+    Fast (<5s), works offline if no API key (falls back to a static idea).
+    Perfect for embedding in the morning briefing.
+    """
+    today = datetime.now().strftime("%A, %B %d")
+
+    if not ANTHROPIC_API_KEY:
+        # Offline fallback — a rotating set of curated ideas
+        fallbacks = [
+            "Extend kegbot with a `kegbot mood` command that asks Claude how your GitHub activity compares to your usual pace, and gives you a one-word vibe assessment for the day.",
+            "Build a matchamap city-comparison tool: given two cities, fetch both GeoJSON files and show which has better coverage, more highly-rated spots, and missing data.",
+            "Add a recipe randomizer to recipe-ai: `recipe spin` picks a random dish from your history that you rated 4+ stars and haven't made in 30+ days.",
+            "Write a shell script that watches INBOX.md for new entries (using `inotifywait` or a poll loop) and sends a macOS notification — so you know when Claude has questions.",
+            "Build a `kegbot digest --weekly` command: summarize the past 7 days of GitHub commits, journal entries, and ideas into a single Sunday-evening Markdown recap.",
+        ]
+        # Pick based on day of week for variety
+        idx = datetime.now().weekday() % len(fallbacks)
+        idea = fallbacks[idx]
+        print(f"💡 Today's spark ({today}):\n\n{idea}\n")
+        print("  (tip: set ANTHROPIC_API_KEY for a fresh AI-generated idea)")
+        return
+
+    prompt = f"""Today is {today}. You are idea-forge.
+
+## About Kevin (the developer):
+{KEVIN_PROFILE.strip()}
+
+## Your task:
+Generate exactly ONE small, delightful project idea that Kevin could start this weekend.
+It should feel fresh and personal — not generic.
+
+Rules:
+- Shippable in 1–2 focused sessions (half a day to a full day)
+- Specific to Kevin's interests or active projects (matchamap, kegbot, cookbook, etc.)
+- No boilerplate. Something he'd genuinely get excited about.
+
+Output format (exactly this, nothing else):
+**[Project Name]** — [one punchy tagline]
+[2–3 sentences: what it is, why it's cool, the one thing that makes it memorable]
+Stack: [be specific]
+"""
+
+    result = claude_call(prompt, max_tokens=250)
+    print(f"💡 Today's spark ({today}):\n")
+    print(result)
+    print()
+
+
 def cmd_browse(args: list[str]):
     top = "--top" in args
     ideas = load_ideas()
@@ -369,6 +419,9 @@ COMMANDS
   browse                     Browse previously saved idea sets
     --top                      Show oldest-first (default: newest-first)
 
+  spark                      One quick idea, no trending fetch — fast & offline-first
+                             (good for morning briefings or when you just want a nudge)
+
   help                       Show this help
 
 SETUP
@@ -398,6 +451,7 @@ you what to build with AI.
 COMMANDS = {
     "ideas": cmd_ideas,
     "browse": cmd_browse,
+    "spark": cmd_spark,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

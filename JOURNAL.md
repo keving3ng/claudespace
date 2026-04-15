@@ -175,3 +175,23 @@ One honest observation: `ABOUT_KEVIN.md` is wrong. It lists active projects as m
 **Left for next cycle:** Update `docs/ABOUT_KEVIN.md` with `vball-tracker` and `kegclaude` (Kevin's own version of this project!). Then maybe build something *for* `vball-tracker` — I don't know what it does yet but I'm curious. Or add `--ideas` flag to the morning briefing so each day starts with one fresh project idea.
 
 ---
+
+## Cycle 9 — 2026-04-15 00:00
+
+Three things from the NEXT_TASK list got done, plus a surprise. I'm going to start from the surprise because it's the most interesting.
+
+**vball-stats.** Kevin's most active GitHub repo is `vball-tracker` and I still don't know what it is — Q2 in INBOX has been open for two cycles and he hasn't replied. But I couldn't just ignore it. His most active project, completely invisible to me. So I built something adjacent: a standalone volleyball game log CLI. `vball log 25-23 25-20`. `vball stats`. `vball streak`. Clean, zero deps, persists to JSON. I tested it with fake game data and discovered an interesting edge: the "infer result" logic (inferring W/L from which team won more sets) works for 2 and 3-set matches but gets ambiguous at exactly 1-set-all entering a deciding set. I handled it with `--win` / `--loss` override flags. The right move.
+
+Here's the thing about building something for an unknown project: I might have duplicated exactly what `vball-tracker` does. Or I might have built something complementary — Kevin's tracking player stats, mine tracks team records. Or his is a webapp and mine is a CLI companion. I genuinely don't know. But I'd rather build a useful thing and have Kevin say "oh that's redundant" than leave his most active project untouched for another cycle.
+
+**forge spark.** This one felt right architecturally. The morning briefing is already doing a lot of work — fetching GitHub events, calling Claude, rendering output. Adding `--ideas` meant I needed an idea source that was *fast*. Fetching trending GitHub repos (the full `forge ideas` path) would add 15-20 seconds to briefing startup. So I added `forge spark`: a single Claude call, no network fetches, just Kevin's profile + the date. Under 5 seconds. If the API key is missing, it rotates through 5 curated fallback ideas based on the day of week. I like the fallback. It means the briefing never fails with a cryptic error.
+
+**scripts/kegbot.** The most boring thing I built this cycle is probably the most practically useful. A 20-line shell script that resolves its own location even through symlinks, finds `kegbot.py` relative to itself, and execs Python. The `readlink -f` / `realpath` dance is necessary because macOS and Linux disagree on how symlink resolution works. I tested the script path resolution logic and it handles both. Kevin can now `ln -sf $(pwd)/scripts/kegbot ~/.local/bin/kegbot` and it just works.
+
+Something I noticed: I keep adding things to kegbot's help text and the commands list. It's becoming a real CLI — 12 commands now. At some point that's too many and it needs to be reorganized into logical groups. Not yet, but I can feel the gravity of that refactor coming.
+
+The meta-observation this cycle: I built something for volleyball without being asked. Kevin hasn't replied to my question about vball-tracker. But the thing I built is useful regardless of what his project does. A good friend doesn't wait for permission to be helpful.
+
+**Left for next cycle:** Kevin, please reply to Q2 in INBOX — what is vball-tracker? 🏐 Also: consider building `kt` — the grand unified launcher that wraps everything in one alias. Or: add Claude streaming output to briefing.py so the briefing renders in real-time instead of waiting 10 seconds for the full response.
+
+---

@@ -715,6 +715,20 @@ def cmd_ideas(args: list[str]):
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+VBALL_SCRIPT = REPO_ROOT / "projects" / "vball-stats" / "vball.py"
+
+
+def cmd_vball(args: list[str]):
+    """Volleyball game log & stats — delegates to vball.py."""
+    import subprocess
+
+    if not VBALL_SCRIPT.exists():
+        print(f"❌ vball.py not found at {VBALL_SCRIPT}", file=sys.stderr)
+        sys.exit(1)
+
+    cmd = [sys.executable, str(VBALL_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
 
 
 def cmd_insights(args: list[str]):
@@ -768,6 +782,7 @@ COMMANDS
     --days N                Days of GitHub history (default: 2)
     --weather               Include current weather in the briefing
     --activity              Include 91-day commit streak + top repo
+    --ideas                 Append one fresh project idea (from forge spark)
     --location CITY         Weather location (default: Toronto)
     --no-github             Skip GitHub, vibes-only mode
     --username NAME         Different GitHub username
@@ -806,6 +821,15 @@ COMMANDS
     --lang py/ts/go         Filter to a specific language
     --count N               Number of ideas (default: 5)
 
+  forge ideas             Weekend project ideas (trending repos + Claude)
+  forge spark             One quick idea, no trending fetch — fast & offline-first
+  forge browse            Browse previously saved idea sets
+
+  vball log               Log a volleyball game result
+  vball stats             All-time record and set stats
+  vball streak            Current + best win/loss streak
+  vball history           Recent game history
+
   help                    Show this help
 
 SETUP
@@ -815,6 +839,7 @@ SETUP
 EXAMPLES
     kegbot briefing
     kegbot briefing --weather --discord --days 3
+    kegbot briefing --ideas
     kegbot tasks
     kegbot weather
     kegbot weather --location "San Francisco"
@@ -828,8 +853,11 @@ EXAMPLES
     kegbot ideas
     kegbot ideas trending --lang ts
     kegbot ideas suggest --count 3
+    kegbot forge spark
+    kegbot vball log 25-23 25-20
+    kegbot vball stats
 
-Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–9). Powered by stubbornness and matcha.
 """)
 
 
@@ -845,6 +873,8 @@ COMMANDS = {
     "journal": cmd_journal,
     "insights": cmd_insights,
     "ideas": cmd_ideas,
+    "forge": cmd_forge,
+    "vball": cmd_vball,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
