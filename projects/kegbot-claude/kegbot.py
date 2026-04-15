@@ -698,11 +698,12 @@ FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to forge.py."""
+    """Weekend project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
         print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
     cmd = [sys.executable, str(FORGE_SCRIPT)] + args
@@ -797,7 +798,7 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
-  insights repos          Per-repo commit breakdown + velocity
+  insights repos          Repo-level commit activity + velocity
   insights summary        Full dashboard view
   insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
@@ -808,6 +809,11 @@ COMMANDS
   ideas trending --lang   Filter to a specific language
     --discord               Post ideas to Discord
     --verbose               Show which repos were used for ideas
+
+  forge                   AI weekend project idea generator
+  forge ideas [--save]    Generate ideas from trending repos (default)
+  forge trending          Show trending repos, no AI
+  forge saved             Previously saved idea sessions
 
   help                    Show this help
 
@@ -827,8 +833,9 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot ideas
-    kegbot ideas trending --lang python
+    kegbot forge
+    kegbot forge ideas --save
+    kegbot forge trending
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -845,7 +852,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "ideas": cmd_ideas,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
