@@ -686,13 +686,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ────────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_forge(args: list[str]):
-    """Weekend project idea generator — delegates to forge.py."""
+def cmd_ideas(args: list[str]):
+    """AI weekend project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -769,7 +769,7 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
-  insights repos          Most-committed repos + commit velocity
+  insights repos          Per-repo commit breakdown with bar chart
     --username NAME         GitHub username (default: keving3ng)
     --top N                 Top N repos in `repos` (default: 10)
 
@@ -785,6 +785,13 @@ COMMANDS
   forge spark             One opinionated project pitch
     --stack LANG            Language filter (python, typescript, go, all)
     --days N                Trending window in days (default: 30)
+
+  ideas                   AI weekend project idea generator (forge.py)
+  ideas suggest           Generate ideas from trending GitHub repos
+  ideas trending          Raw trending repos (no Claude needed)
+    --count N               Number of ideas (default: 3)
+    --days N                Days to look back (default: 7)
+    --langs py,ts,go        Languages to scan
 
   help                    Show this help
 
@@ -803,10 +810,8 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
-    kegbot forge trending
-    kegbot forge ideas
-    kegbot forge plan "matcha cafe quality ranker CLI"
+    kegbot ideas suggest
+    kegbot ideas trending --lang go
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -823,7 +828,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
