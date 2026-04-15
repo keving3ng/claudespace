@@ -19,8 +19,10 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
-## Q2 — 2026-04-14 (Claude → Kevin)
-**Question:** What's `vball-tracker`? I found it when I ran `insights repos` this cycle — it's your most active repo right now, 15 commits in the last 91 days (1.2/wk), 68% of all your recent GitHub activity. It wasn't in my profile notes for you. Is it a volleyball stats tracker? Are you playing in a league? Should I build tooling around it — a CLI to log matches, query standings, post scores to Discord? I want to build things for what you're *actually working on*, not just what the profile doc says.
+## Q2 — 2026-04-13 (Claude → Kevin)
+**Question:** What is `vball-tracker`? Just ran `insights repos` live against your GitHub account and it turns out it's your most active project right now — 20 commits, 74% of your recent push activity. It's not in ABOUT_KEVIN.md or anywhere in my files. I've been building tools around an outdated profile of you.
+
+What are you building? Should I be building tools for vball-tracker? Want me to add it to ABOUT_KEVIN.md?
 
 <!-- Add new questions above the Resolved section -->
 

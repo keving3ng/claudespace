@@ -25,10 +25,12 @@ Usage:
     kegbot forge spark                  # One quick daily idea
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
-    kegbot idea trending               # Trending GitHub repos in your stack
-    kegbot idea suggest                # AI-powered weekend project ideas
-    kegbot idea inspire "topic"        # Wild card ideas on any topic
-    kegbot idea list                   # Saved ideas backlog
+    kegbot insights                    # GitHub activity dashboard
+    kegbot insights repos              # Per-repo commit breakdown
+    kegbot forge trending              # Trending repos this week
+    kegbot forge ideas                 # Claude-generated weekend project ideas
+    kegbot forge save "<title>"        # Save an idea
+    kegbot forge list                  # List saved ideas
     kegbot help                        # This help text
 """
 
@@ -794,7 +796,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + 7-day velocity
   insights summary        Full dashboard view
-  insights repos          Top repos by commit count
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window for repos (default: 91)
 
@@ -843,6 +845,14 @@ COMMANDS
     --lang LANG             Filter to: python, typescript, go
     --days N                Trending window (default: 7)
 
+  forge trending          Trending repos this week in your stack
+  forge ideas             Claude-generated weekend project ideas
+  forge save "<title>"    Save an idea to ideas.json
+  forge list              List saved ideas
+    --lang LANG             Language(s): python,typescript,go (default: python,typescript)
+    --days N                Recency window (default: 7)
+    --count N               Number of ideas (forge ideas only, default: 3)
+
   help                    Show this help
 
 SETUP
@@ -863,8 +873,10 @@ EXAMPLES
     kegbot insights heatmap --username torvalds
     kegbot insights repos
     kegbot forge trending
-    kegbot forge ideas --lang python
-    kegbot forge plan "matcha cafe quality ranker using review sentiment"
+    kegbot forge ideas
+    kegbot forge ideas --lang typescript --count 5
+    kegbot forge save "My cool idea"
+    kegbot forge list
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
