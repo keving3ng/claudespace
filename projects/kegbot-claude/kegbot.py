@@ -692,21 +692,21 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+IDEA_FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
 
 
-def cmd_forge(args: list[str]):
-    """Weekend project idea generator — delegates to forge.py."""
+def cmd_ideas(args: list[str]):
+    """idea-forge — AI project idea generator from trending GitHub repos."""
     import subprocess
 
-    if not FORGE_SCRIPT.exists():
-        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/forge.py")
+    if not IDEA_FORGE_SCRIPT.exists():
+        print(f"❌ idea_forge.py not found at {IDEA_FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    cmd = [sys.executable, str(IDEA_FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -796,35 +796,15 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + weekly velocity
   insights summary        Full dashboard view
-  insights repos          Commits per repo — ranked breakdown
+  insights repos          Per-repo commit counts + weekly velocity
     --username NAME         GitHub username (default: keving3ng)
-    --top N                 Show top N repos (repos command, default: 10)
+    --days N                Look-back window in days (default: 91)
 
-  ideas                   AI weekend project idea generator
-  ideas trending          Show raw trending repos (no API key needed)
-  ideas trending --lang   Filter to a specific language
-    --discord               Post ideas to Discord
-    --verbose               Show which repos were used for ideas
-
-  forge                   AI weekend project idea generator
-  forge ideas [--save]    Generate ideas from trending repos (default)
-  forge trending          Show trending repos, no AI
-  forge saved             Previously saved idea sessions
-
-  ideas                   AI weekend project idea generator
-  ideas forge             3 ideas from trending GitHub repos (default)
-    --days N                Trending window in days (default: 14)
-    --language LANG         Focus on: python, typescript, go
-    --raw                   Show repos only, skip Claude
-  ideas trending          Show trending repos without generating ideas
-  ideas spark             One quick bold idea, no trending analysis
-  ideas save "name"       Save an idea
-  ideas list              List saved ideas
-
-  forge ideas             Generate 5 weekend project ideas via Claude
-    --lang LANG             Focus on one language (python/typescript/go)
-    --save                  Save ideas to ideas.json
-  forge browse            Browse previously saved idea sets
+  ideas                   AI project ideas from trending GitHub repos
+  ideas trending          Show raw trending repos (no Claude needed)
+  ideas suggest           Claude-generated project ideas (needs API key)
+    --lang py/ts/go         Filter to a specific language
+    --count N               Number of ideas (default: 5)
 
   help                    Show this help
 
@@ -845,9 +825,9 @@ EXAMPLES
     kegbot insights repos
     kegbot insights heatmap --username torvalds
     kegbot insights repos
-    kegbot forge ideas
-    kegbot forge ideas --lang python --save
-    kegbot forge browse
+    kegbot ideas
+    kegbot ideas trending --lang ts
+    kegbot ideas suggest --count 3
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -864,7 +844,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
