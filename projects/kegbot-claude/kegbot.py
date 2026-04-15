@@ -19,6 +19,10 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
+    kegbot forge trending              # Trending repos in Kevin's tech stack
+    kegbot forge trending --lang go    # Filter by language
+    kegbot forge ideas                 # Claude-generated project ideas
+    kegbot forge plan "<idea>"         # Implementation plan for an idea
     kegbot help                        # This help text
 """
 
@@ -684,16 +688,16 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
 
 # ─── forge command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI-powered project idea generator — delegates to idea_forge.py."""
+    """Weekend project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
-        print(f"❌ idea_forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/idea_forge.py")
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
     cmd = [sys.executable, str(FORGE_SCRIPT)] + args
@@ -765,8 +769,15 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + 14-day velocity
+  insights repos          Most-committed repos + commit velocity
     --username NAME         GitHub username (default: keving3ng)
+    --top N                 Top N repos in `repos` (default: 10)
+
+  forge trending          Trending GitHub repos in Kevin's stack
+    --lang LANG             Filter: python, typescript, go, rust
+    --days N                Look-back window (default: 7)
+  forge ideas             Claude-generated weekend project ideas
+  forge plan "<idea>"     Rough implementation plan for an idea
 
   forge                   AI project idea generator from GitHub trends
   forge ideas             5 tailored weekend project ideas (default)
@@ -795,8 +806,7 @@ EXAMPLES
     kegbot insights repos
     kegbot forge trending
     kegbot forge ideas
-    kegbot forge ideas --stack python,go --period month
-    kegbot forge spark
+    kegbot forge plan "matcha cafe quality ranker CLI"
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
