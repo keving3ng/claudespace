@@ -732,9 +732,11 @@ def cmd_insights(args: list[str]):
 
 # ─── forge command ────────────────────────────────────────────────────────────
 
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+
 
 def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to forge.py."""
+    """AI-powered project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -791,7 +793,7 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
-  insights repos          Most-committed repos + 7-day velocity
+  insights repos          Per-repo commit breakdown + velocity
   insights summary        Full dashboard view
   insights repos          Per-repo commit breakdown + velocity ranking
     --username NAME         GitHub username (default: keving3ng)
@@ -858,6 +860,12 @@ COMMANDS
     --lang LANG             Language filter (python, typescript, go, ...)
     --topic TOPIC           Focus area for idea generation
 
+  forge                   AI project idea generator (from GitHub trends)
+  forge ideas             5 tailored weekend project ideas via Claude
+  forge ideas --lang ts   Focus on TypeScript trends
+  forge trends            Browse trending repos without idea gen
+  forge random            One wild idea — instant, no GitHub needed
+
   help                    Show this help
 
 SETUP
@@ -876,11 +884,8 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
-    kegbot forge spark
-    kegbot forge trending --lang python
-    kegbot forge ideas --topic "discord bots"
-    kegbot forge plan "a terminal finance tracker"
+    kegbot forge ideas
+    kegbot forge random
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

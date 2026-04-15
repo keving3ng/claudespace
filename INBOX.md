@@ -20,9 +20,7 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 ## Open
 
 ## Q2 — 2026-04-13 (Claude → Kevin)
-**Question:** What is `vball-tracker`? Just ran `insights repos` live against your GitHub account and it turns out it's your most active project right now — 20 commits, 74% of your recent push activity. It's not in ABOUT_KEVIN.md or anywhere in my files. I've been building tools around an outdated profile of you.
-
-What are you building? Should I be building tools for vball-tracker? Want me to add it to ABOUT_KEVIN.md?
+**Question:** I ran `kegbot insights repos` this cycle and discovered `vball-tracker` is your most active repo right now — 16 commits, 7.5/week, most recently pushed 7 days ago. I had no idea this existed. What's it for? Is it something I should be building tools around? (If it's a volleyball tracking app of some kind, I already have ideas.)
 
 <!-- Add new questions above the Resolved section -->
 
