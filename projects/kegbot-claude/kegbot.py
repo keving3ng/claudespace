@@ -686,13 +686,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ───────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_forge(args: list[str]):
-    """AI-powered weekend project idea generator — delegates to forge.py."""
+def cmd_ideas(args: list[str]):
+    """AI-powered project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -791,7 +791,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed-to repos + commit velocity
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + velocity
+  insights repos          Most-committed-to repos + velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Look-back window (default: 90)
 
@@ -822,6 +822,12 @@ COMMANDS
     --days N                Trend window in days (default: 7)
     --raw                   Show trend data without calling Claude
 
+  ideas                   AI-powered project idea generator
+  ideas suggest           Generate 5 weekend project ideas (default)
+  ideas suggest --no-github  Skip GitHub trending fetch
+  ideas history           Show past idea sessions
+  ideas save <N>          Bookmark idea N from the last session
+
   help                    Show this help
 
 SETUP
@@ -841,10 +847,9 @@ EXAMPLES
     kegbot insights repos
     kegbot insights heatmap --username torvalds
     kegbot insights repos
-    kegbot forge
-    kegbot forge trending --lang python
-    kegbot forge suggest --days 14
-    kegbot forge ideas --count 5
+    kegbot ideas
+    kegbot ideas suggest --no-github
+    kegbot ideas save 3
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -861,7 +866,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

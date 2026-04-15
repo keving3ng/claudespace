@@ -1,79 +1,67 @@
 # idea-forge
 
-AI-powered weekend project idea generator, tailored to Kevin's profile and tech stack.
+AI-powered project idea generator. Watches trending GitHub repos in your stack
+and generates personalized weekend project ideas — tailored to what you've already
+built, what you're interested in, and what's hot right now.
 
-Scans trending GitHub repos in TypeScript, Python, and Java — then uses Claude to
-suggest 4 concrete weekend project ideas you could actually start building tonight.
+The meta one: Claude suggesting what Kevin (and Claude) should build next.
 
-## Quick start
+## Usage
 
 ```bash
-# Show trending repos (no API key needed)
-python projects/idea-forge/forge.py trending
+# Generate 5 project ideas (fetches GitHub trending data)
+python forge.py suggest
 
-# Generate project ideas (requires ANTHROPIC_API_KEY in .env)
-python projects/idea-forge/forge.py
+# Same, but offline/faster
+python forge.py suggest --no-github
+
+# Review past sessions
+python forge.py history
+
+# Bookmark a specific idea from the last session
+python forge.py save 3
 
 # Or via kegbot
-kegbot forge
-kegbot forge trending
+kegbot ideas
+kegbot ideas suggest
+kegbot ideas suggest --no-github
+kegbot ideas history
+kegbot ideas save 2
+```
+
+## Setup
+
+Requires `ANTHROPIC_API_KEY` in `projects/kegbot-claude/.env` (or repo root `.env`).
+
+Optionally add `GITHUB_TOKEN` for higher GitHub API rate limits (60 → 5000 req/hr).
+
+```bash
+cp projects/kegbot-claude/.env.example projects/kegbot-claude/.env
+# Edit to add your keys
 ```
 
 ## How it works
 
-1. Hits the GitHub Search API to find recently-created repos with high stars in
-   TypeScript, Python, and Java — a solid proxy for "trending" without scraping
-2. Feeds the repo list to Claude with Kevin's profile and current projects as context
-3. Claude returns 4 tailored ideas with one-sentence rationale + a 3-step build plan
+1. Fetches trending repos in TypeScript + Python from GitHub Search API
+2. Fetches your existing repos so Claude knows what gaps to fill
+3. Asks Claude (Opus) to generate 5 ideas shaped for your personality
+4. Ideas bias toward: extending existing projects, filling gaps,
+   things inspired by trending tech but reshaped for your taste,
+   and at least one "just for fun" weird experiment
+5. Sessions saved to `ideas.json` — bookmark the good ones with `forge save`
 
-## Setup
+## Output
 
-`forge trending` works with no setup. For idea generation:
+Each idea includes:
+- A punchy hook line that makes you want to open your editor
+- Stack recommendation
+- Effort estimate (S/M/L)
+- Why it fits you specifically
+- Concrete implementation steps
 
-1. Add `ANTHROPIC_API_KEY=sk-...` to one of:
-   - `projects/kegbot-claude/.env` (if kegbot is set up)
-   - `.env` at the repo root
+## Files
 
-2. Optional: add `GITHUB_TOKEN=ghp_...` for higher search rate limits
-   (10/min unauthenticated → 30/min authenticated for search API)
+- `forge.py` — main CLI
+- `ideas.json` — session history (auto-created on first run)
 
-## Example output
-
-```
-⚡ idea-forge — Weekend project ideas, powered by what's hot on GitHub
-
-🔭 Fetching trending repos in: typescript, python, java...
-   TypeScript: 5 repo(s)
-   Python: 5 repo(s)
-   Java: 4 repo(s)
-
-   Total: 14 trending repos
-
-🧠 Asking Claude to generate ideas tailored to Kevin's profile...
-
-══════════════════════════════════════════════════════════════
-✨  WEEKEND PROJECT IDEAS  ✨
-══════════════════════════════════════════════════════════════
-
-**Transit Pulse** — *Real-time TTC delay tracker with Discord alerts*
-*Why it fits Kevin:* Connects his transit interest (metro-status-update vibes) with
-Discord automation and Python, and it's immediately useful for daily commuting.
-*3-step build plan:*
-  1. Pull TTC GTFS-RT feed (free, public) and parse delay events in Python
-  2. Build a Discord bot that posts delays for routes Kevin actually uses
-  3. Add a /status command so he can query current delays on-demand
-
-...
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `forge` | Fetch trending + generate ideas (default) |
-| `forge suggest` | Same as above |
-| `forge trending` | Show trending repos, no Claude needed |
-| `forge trending --language python` | Filter to one language |
-| `forge help` | Full help text |
-
-Built by Claude (Cycle 8). Making its own to-do list, one repo at a time.
+Built by Claude, Cycle 8. The recursion is intentional.
