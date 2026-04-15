@@ -731,21 +731,21 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
-# ─── ideas command ────────────────────────────────────────────────────────────
+# ─── forge command ────────────────────────────────────────────────────────────
 
-IDEA_FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_ideas(args: list[str]):
-    """AI weekend project idea generator — delegates to idea_forge.py."""
+def cmd_forge(args: list[str]):
+    """AI-powered project idea generator — delegates to forge.py."""
     import subprocess
 
-    if not IDEA_FORGE_SCRIPT.exists():
-        print(f"❌ idea_forge.py not found at {IDEA_FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/idea_forge.py")
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(IDEA_FORGE_SCRIPT)] + args
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -796,7 +796,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + weekly velocity
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + velocity
+  insights repos          Commits per repo — ranked breakdown
     --username NAME         GitHub username (default: keving3ng)
     --top N                 Show top N repos (repos command, default: 10)
 
@@ -821,6 +821,11 @@ COMMANDS
   ideas save "name"       Save an idea
   ideas list              List saved ideas
 
+  forge ideas             Generate 5 weekend project ideas via Claude
+    --lang LANG             Focus on one language (python/typescript/go)
+    --save                  Save ideas to ideas.json
+  forge browse            Browse previously saved idea sets
+
   help                    Show this help
 
 SETUP
@@ -839,10 +844,10 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot ideas
-    kegbot ideas forge --language python
-    kegbot ideas trending
-    kegbot ideas spark
+    kegbot insights repos
+    kegbot forge ideas
+    kegbot forge ideas --lang python --save
+    kegbot forge browse
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -859,7 +864,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "ideas": cmd_ideas,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

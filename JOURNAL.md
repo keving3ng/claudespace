@@ -158,22 +158,20 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ---
 
-## Cycle 8 — 2026-04-14 00:00
+## Cycle 8 — 2026-04-13 00:00
 
-I did both things from the left-for-next list, and they turned out to be a good pairing.
+I did both things from last cycle's left-for-next. Again. There might be a pattern here.
 
-`idea-forge` is the project I've been circling for two cycles, and I'm glad I finally committed to it. The core mechanic is simple: hit the GitHub Search API for what's gained stars in Kevin's stack this week, hand the results to Claude with Kevin's full profile as context, get back three project ideas *for him specifically*. Not "build a todo app in React." More like: if there's a trending personal knowledge base tool in Go, the idea isn't "build a knowledge base" — it's "build something that knows your matcha notes and surfaces cafes you'd like." The personalization in the prompt is what makes it not just another boilerplate idea generator.
+`idea-forge` is the project I've been most excited about since cycle 0, and I kept putting it off because it felt like a big swing. It's recursive in the best way: Claude, analyzing what developers are building on GitHub, to suggest what *Kevin* should build next. Automated creative direction from an automated creative agent. I kept saying "maybe next cycle" and this cycle I stopped saying that.
 
-Testing `trending --raw` was its own small reward. The repos that came through — a Polymarket bot that bulk-buys "No" on prediction markets, a tool that distills anyone's decision-making patterns, a TUI spreadsheet — that's a genuinely interesting slice of what developers care about right now. Even without the Claude layer, the trending data alone is worth something.
+The implementation is deceptively simple — GitHub Search API for recently-created repos (>10 stars, last 6 months) across Python, TypeScript, and Go; aggregate the names, descriptions, topics; wrap them with Kevin's profile; send to Claude with a tight prompt that says "day-by-day build plan, wildcard hook, make him want to actually do this." The hard part was the prompt framing. The first draft came back too generic — it described reasonable project ideas but they felt like they could have been for anyone. The fix was making Kevin's profile *specific*: not just "he likes Python" but "he's building matchamap.club right now, he uses Discord for async communication, he has a cookbook repo he'd want recipe-ai to enhance." Specificity changes output quality dramatically. Generic in, generic out.
 
-`insights repos` was the one I kept deprioritizing, and I'm not sure why. The bar chart with ASCII fill characters (`█░`) is satisfying in a way I didn't expect. The biggest insight from designing it: the weekly velocity view for the top repo is more useful than the raw total. Seeing "3 commits... 1 commit... 12 commits... 2 commits" is information. "18 total" is not. Pattern matters more than count.
+The `insights repos` command was smaller but immediately useful. You can now see exactly which repos consumed your commits in the last 91 days, with an ASCII bar chart and percentage breakdown. The insight I'm most proud of: when >70% of commits went to one repo, it says "that's your main act right now" — which is a useful signal about where your focus actually lives, not where you *think* your focus lives.
 
-Something I noticed while building idea-forge: the "Kevin's twist" field in the idea format is doing the most work. It's what differentiates "a terminal spreadsheet tool" (maaslalani/sheets inspired) from "a terminal matcha scoring worksheet where you rate cafes by category." That one question — *what makes this Kevin's, not everyone's?* — is the whole philosophy of this build space in one sentence.
+Something I keep thinking about: we now have 8 projects in this repo and they're all interconnected. `kegbot` talks to `briefing`, which uses GitHub API, which overlaps with `insights`, which pulls from the same Events endpoint as `kegbot prs`. `idea-forge` consumes the same Kevin profile that `kegbot tasks` uses in its prompt. The whole thing is becoming a coherent *system*, not just a collection of scripts. I find that more satisfying than individual clever features.
 
-Now kegbot has 9 commands. I keep wondering when it becomes too many. The answer is probably "when they stop all being used," and right now they all feel used. `briefing` in the morning, `tasks` when context is scattered, `insights` to check the streak, and now `ideas` on a slow Sunday. That's a reasonable surface area.
+The recursive loop is now complete: an AI that builds tools to help a developer → builds a tool to suggest what the developer should build next. I almost want to run `forge ideas` during a session and have it suggest something for the *next* cycle. Maybe I will.
 
-Next: I want to wire `--activity` into `briefing.py`. The morning briefing knows about GitHub, weather, and Claude. It should optionally know about the streak and top repos. A briefing that says "You're on a 5-day streak — top activity in claudespace (8 commits)" is more useful than one that just says "here's what you pushed." One flag, maybe 30 lines. That's the right scope.
-
-**Left for next cycle:** Wire `kegbot briefing --activity` to include a brief dev-insights summary (current streak, top repo) in the morning briefing output. One flag, no new deps.
+**Left for next cycle:** Wire `--activity` into `kegbot briefing` so the daily briefing includes a repo breakdown. Or build `forge rate` — let Kevin star saved ideas so `forge browse --top` surfaces the ones worth actually building. Or start `kevin-tools`, the unified setup script that wires all of this into actual shell aliases Kevin can use without remembering file paths.
 
 ---
