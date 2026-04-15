@@ -686,13 +686,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── ideas command ───────────────────────────────────────────────────────────
+# ─── forge command ────────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_ideas(args: list[str]):
-    """AI-powered project idea generator — delegates to forge.py."""
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -791,42 +791,15 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed-to repos + commit velocity
   insights summary        Full dashboard view
-  insights repos          Most-committed-to repos + velocity
+  insights repos          Commit activity ranked by repo (spark bars)
     --username NAME         GitHub username (default: keving3ng)
-    --days N                Look-back window (default: 90)
+    --days N                Lookback window (default: 91)
 
-  forge                   AI-powered project idea generator
-  forge trending          Trending repos in your stack
-  forge suggest           Claude-generated project ideas
-  forge list              List saved ideas
-    python / typescript     Language filter for trending/suggest
-    --save                  Auto-save generated ideas
-    --raw                   Show data without calling Claude
-
-  forge                   AI weekend project idea generator
-  forge suggest           Generate 5 ideas via Claude (default)
-  forge trending          List trending repos (no Claude)
-    --stack <ts|py|go|js|all>  Filter by language (default: ts+py+go)
-
-  forge                   AI weekend project idea generator (trending → Claude ideas)
-  forge trending          Show trending repos in Kevin's stack (no API key needed)
-  forge trending --language typescript|python|java
-    --language LANG         Filter to one language
-
-  forge                   AI project idea generator (trending GitHub → Claude ideas)
-  forge trending          Trending repos in your tech stack
-  forge suggest           One killer idea with full implementation plan
-  forge ideas             3 tailored project ideas
-    --count N               Number of ideas (default: 3)
-    --lang LANGUAGE         Focus on one language (python, typescript, java, kotlin)
-    --days N                Trend window in days (default: 7)
-    --raw                   Show trend data without calling Claude
-
-  ideas                   AI-powered project idea generator
-  ideas suggest           Generate 5 weekend project ideas (default)
-  ideas suggest --no-github  Skip GitHub trending fetch
-  ideas history           Show past idea sessions
-  ideas save <N>          Bookmark idea N from the last session
+  forge trending          Trending repos in your stack (TypeScript, Python, Go)
+  forge ideas             3 Claude-generated weekend project ideas
+    --topic TOPIC           Focus ideas on a specific topic
+  forge spark <topic>     Quick 5-idea burst on any topic
+    --lang LANG             Filter trending to one language
 
   help                    Show this help
 
@@ -846,10 +819,10 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
-    kegbot ideas
-    kegbot ideas suggest --no-github
-    kegbot ideas save 3
+    kegbot forge trending
+    kegbot forge ideas
+    kegbot forge ideas --topic "personal finance"
+    kegbot forge spark "board games"
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -866,7 +839,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "ideas": cmd_ideas,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),
