@@ -1,85 +1,98 @@
 # idea-forge
 
-**Weekend project idea generator.** Watches what's trending on GitHub, feeds it to Claude with Kevin's profile, and synthesizes personalized project ideas.
+AI-powered weekend project idea generator. Watches what's trending on GitHub in Kevin's stack, then uses Claude to suggest projects tailored to who he actually is.
 
-Recursive? A little. The Claude that lives in this repo suggesting what to build next. But the ideas are good.
+The meta-twist: this is Claude, running inside claudespace, suggesting what to build next. The recursion is working as intended.
 
 ## What it does
 
-1. Hits the GitHub Search API for recently-created, fast-rising repos in your stack
-2. Formats the trending data into a structured context block
-3. Asks Claude to synthesize 5 tailored project ideas — naming the specific trend that sparked each
-4. Returns ideas with punchy names, one-sentence pitches, and concrete implementation sketches
+1. Fetches recently-created repos with >30 stars across TypeScript, Python, and Go
+2. Grabs Kevin's own repos for context
+3. Sends everything to Claude with a prompt that knows Kevin's projects and interests
+4. Returns 5 project idea cards — each with a name, one-sentence pitch, why-Kevin, how-to-start, and scope
 
 ## Usage
 
 ```bash
-cd projects/idea-forge
+# Default: generate 5 ideas via Claude
+python forge.py suggest
 
-# 5 ideas from Python + TypeScript trends (default)
-python idea_forge.py ideas
+# List trending repos without using Claude (debug / browse)
+python forge.py trending
 
-# Filter by language
-python idea_forge.py ideas --stack typescript
-python idea_forge.py ideas --stack python
-python idea_forge.py ideas --stack all        # python + typescript + go
+# Filter to a specific language
+python forge.py suggest --stack py       # Python only
+python forge.py trending --stack ts      # TypeScript only
+python forge.py suggest --stack all      # All stacks
 
-# Just show the trending data without Claude synthesis
-python idea_forge.py trending
-python idea_forge.py trending --stack rust
-
-# One opinionated project pitch — no list, just a spark
-python idea_forge.py spark
-
-# Narrow the trending window
-python idea_forge.py ideas --days 14          # last 2 weeks only
+# Via kegbot
+kegbot forge
+kegbot forge suggest --stack go
+kegbot forge trending
 ```
+
+## Stack options
+
+| Flag | Language |
+|------|----------|
+| `ts` | TypeScript |
+| `py` | Python |
+| `go` | Go |
+| `js` | JavaScript |
+| `all` | TypeScript + Python + Go + JavaScript |
+
+Default: TypeScript + Python + Go
 
 ## Setup
 
-```bash
-# Claude synthesis (ANTHROPIC_API_KEY required for ideas/spark)
-# If you already have kegbot-claude/.env configured, idea-forge will find it automatically.
-cp ../kegbot-claude/.env.example ../kegbot-claude/.env
-# Add: ANTHROPIC_API_KEY=sk-ant-...
+No API key needed for `forge trending`.
 
-# Optional: GITHUB_TOKEN for higher rate limits (60 → 5000 req/hr)
-# Add to the same .env: GITHUB_TOKEN=ghp_...
+For `forge suggest`, set `ANTHROPIC_API_KEY` in your `.env`:
+
+```bash
+cp projects/kegbot-claude/.env.example projects/kegbot-claude/.env
+# Add ANTHROPIC_API_KEY
 ```
 
-## How the ideas work
+Optionally set `GITHUB_TOKEN` for higher rate limits (60 → 5000 req/hr). Without a token, the GitHub Search API is limited to 10 unauthenticated requests/minute.
 
-Each idea is:
-- **Sparked by** a real trending repo or technique in the data
-- **Tailored** to Kevin's actual stack and interests (maps, automation, cooking, kegbot, matcha, ML)
-- **Concrete** — not "explore X" but "build a CLI that does Y using Z"
-- **Sized** — one idea is a 1-day build, one is weekend+, one is genuinely weird
-
-The `spark` command skips the menu entirely and generates one fully-formed pitch, written like a collaborator who just had an idea and can't wait to tell you.
+```
+GITHUB_TOKEN=your_github_pat
+```
 
 ## Output example
 
 ```
-💡 idea-forge — Weekend project ideas from the GitHub zeitgeist
+💡 idea-forge — generating weekend project ideas
 
-   Stacks: python, typescript  |  Trending window: last 30 days
+   Stack: TypeScript, Python, Go  |  Trending window: last 60 days
 
-## matcha-vector — small
-Turn Kevin's matchamap GeoJSON data into a local semantic search engine.
-Use a trending lightweight embedding library to create vectors from cafe descriptions,
-then expose a "find cafes similar to this one" CLI command.
-*Sparked by: a trending Python vector-search library hitting 2k stars*
+   Fetching trending TypeScript repos... 6 found
+   Fetching trending Python repos... 6 found
+   Fetching trending Go repos... 6 found
+   Fetching Kevin's repos for context... 10 found
 
-## kegbot-canvas — medium
-...
+[claude] Generating ideas...
+
+══════════════════════════════════════════════════════════════
+  💡 Weekend Project Ideas — Forged for @keving3ng
+══════════════════════════════════════════════════════════════
+
+**MapMood** — A sentiment layer for matchamap that color-codes cafes by review tone
+*Why Kevin:* Direct extension of matchamap.club with an ML angle he's already explored
+*How to start:*
+- Scrape/parse existing review data for Toronto cafes from OSM + Google
+- Run a lightweight sentiment model (VADER or a small HuggingFace model) per cafe
+- Add a `quality_score_v2` to the GeoJSON output that weights sentiment
+*Scope:* weekend
+
+... and 4 more
 ```
 
 ## Notes
 
-- GitHub Search API: public, rate-limited to 10 req/min unauthenticated (30 req/min with token)
-- Searches repos created in the last N days with >50 stars — these are things people are actively building, not just popular old projects
-- Zero external dependencies beyond stdlib + optionally the Anthropic API
+- Searches GitHub for repos created in the **last 60 days** with **>30 stars**
+- Ideas are *inspired by* trends, not copies — Claude translates signals into Kevin-specific projects
+- No data is persisted between runs; each `forge suggest` is a fresh read of what's hot
 
----
-
-*Built by Claude (Cycle 8). Because someone should be watching what the world is building.*
+Built by Claude, Cycle 8. Because the best way to decide what to build is to ask the thing that's already building things.

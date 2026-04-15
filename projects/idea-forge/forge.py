@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """
-idea-forge — AI-powered weekend project idea generator
+forge — AI-powered weekend project idea generator
 
-Watches what's trending in your tech stack and asks Claude to suggest
-projects you'd actually want to build — tailored to your interests,
-with your existing tools as building blocks.
+Watches what's trending on GitHub in Kevin's tech stack, then uses Claude to
+suggest project ideas tailored specifically to who Kevin is and what he builds.
 
-Zero dependencies beyond stdlib. Uses GitHub Search API + Anthropic API.
+The meta-twist: this is Claude suggesting what Claude should build next.
+Welcome to the recursion.
 
 Usage:
-    forge trending              # trending repos in Kevin's stack (py + ts)
-    forge trending python       # specific language
-    forge trending typescript
-    forge suggest               # AI-generated project ideas (requires ANTHROPIC_API_KEY)
-    forge suggest --raw         # show trending context without calling Claude
-    forge list                  # list saved ideas
-    forge save "Project Name"   # note a project idea manually
+    forge suggest              # 3-5 idea cards via Claude (default)
+    forge suggest --stack py   # Filter to Python trending repos only
+    forge trending             # List trending repos (no Claude needed)
+    forge trending --stack ts  # TypeScript trending only
     forge help
 """
 
@@ -25,24 +22,31 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
-# ─── Paths ────────────────────────────────────────────────────────────────────
+# ─── Config ───────────────────────────────────────────────────────────────────
 
-FORGE_DIR = Path(__file__).parent
-REPO_ROOT = FORGE_DIR.parent.parent
-IDEAS_FILE = FORGE_DIR / "ideas.json"
+REPO_ROOT = Path(__file__).parent.parent.parent
 
-# Languages to watch (Kevin's stack)
-DEFAULT_LANGS = ["python", "typescript"]
+STACK_LANGUAGES = {
+    "ts": "TypeScript",
+    "py": "Python",
+    "go": "Go",
+    "js": "JavaScript",
+    "all": None,  # means: use DEFAULT_STACKS
+}
+
+DEFAULT_STACKS = ["TypeScript", "Python", "Go"]  # Kevin's primary languages
+
+KEVIN_USERNAME = "keving3ng"
 
 # ─── Env ──────────────────────────────────────────────────────────────────────
 
 
 def load_env():
     for env_path in [
-        FORGE_DIR / ".env",
+        Path(__file__).parent / ".env",
         REPO_ROOT / ".env",
         REPO_ROOT / "projects" / "kegbot-claude" / ".env",
     ]:
@@ -76,94 +80,239 @@ def _github_request(url: str) -> dict | list | None:
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
-        if e.code == 422:
-            # Validation error — probably a query issue
+        if e.code == 403:
             body = e.read().decode("utf-8", errors="replace")
-            print(f"⚠  GitHub search error: {body[:200]}", file=sys.stderr)
+            if "rate limit" in body.lower():
+                print(
+                    "⚠️  GitHub rate limit hit. Set GITHUB_TOKEN for 5000 req/hr.",
+                    file=sys.stderr,
+                )
+            else:
+                print(f"⚠️  GitHub API 403: {body[:120]}", file=sys.stderr)
             return None
+        if e.code == 422:
+            return None  # search query issue, silent
         body = e.read().decode("utf-8", errors="replace")
-        print(f"⚠  GitHub API error {e.code}: {body[:200]}", file=sys.stderr)
+        print(f"⚠️  GitHub API error {e.code}: {body[:200]}", file=sys.stderr)
         return None
     except Exception as e:
-        print(f"⚠  Request failed: {e}", file=sys.stderr)
+        print(f"⚠️  Request failed: {e}", file=sys.stderr)
         return None
 
 
-def fetch_trending(lang: str, days: int = 7, count: int = 8) -> list[dict]:
-    """
-    Fetch trending repos for a language using GitHub Search API.
-    "Trending" = recently pushed, sorted by stars, with minimum star threshold.
-    Returns list of simplified repo dicts.
-    """
+def search_trending_repos(language: str, days: int = 60, limit: int = 8) -> list[dict]:
+    """Search GitHub for recently-created popular repos in a given language."""
     cutoff = (date.today() - timedelta(days=days)).isoformat()
-    query = f"language:{lang} pushed:>{cutoff} stars:>50"
-    params = urllib.parse.urlencode({
-        "q": query,
-        "sort": "stars",
-        "order": "desc",
-        "per_page": count,
-    })
+    params = urllib.parse.urlencode(
+        {
+            "q": f"language:{language} created:>{cutoff} stars:>30",
+            "sort": "stars",
+            "order": "desc",
+            "per_page": limit,
+        }
+    )
     url = f"https://api.github.com/search/repositories?{params}"
     data = _github_request(url)
-
-    if not data or not isinstance(data, dict):
+    if not data or "items" not in data:
         return []
-
-    repos = data.get("items", [])
-    simplified = []
-    for r in repos:
-        simplified.append({
-            "name": r.get("full_name", ""),
-            "description": (r.get("description") or "")[:120],
-            "stars": r.get("stargazers_count", 0),
-            "language": r.get("language") or lang,
-            "topics": r.get("topics", [])[:5],
-            "url": r.get("html_url", ""),
-            "pushed_at": r.get("pushed_at", "")[:10],
-        })
-
-    return simplified
+    return data["items"]
 
 
-# ─── Kevin's profile (used in prompts) ───────────────────────────────────────
+def fetch_kevin_repos() -> list[dict]:
+    """Fetch Kevin's own repos (sorted by recent push) for context."""
+    url = f"https://api.github.com/users/{KEVIN_USERNAME}/repos?sort=pushed&per_page=12&type=owner"
+    data = _github_request(url)
+    return data if isinstance(data, list) else []
 
 
-KEVIN_PROFILE = """
-Kevin Geng (keving3ng) — full-stack software engineer at Faire, based in Toronto.
+# ─── Formatting ───────────────────────────────────────────────────────────────
 
-Stack: React, TypeScript, Java/Kotlin/Spring Boot, Python, AWS
 
-Active projects:
-- matchamap.club — opinionated matcha cafe finder (map + curated data)
-- kegbot — personal AI assistant CLI: daily briefings, weather, PR digest
-- claudespace — autonomous AI build lab (Claude runs nightly, building tools for Kevin)
-- recipe-ai — cooking assistant with pantry tracking, meal planning
-- dev-insights — terminal GitHub contribution heatmap + streak tracker
+def _repo_one_liner(repo: dict) -> str:
+    name = repo.get("full_name", "?")
+    desc = (repo.get("description") or "").strip()
+    stars = repo.get("stargazers_count", 0)
+    lang = repo.get("language") or "?"
+    topics = repo.get("topics", [])
+    topic_str = f"  [{', '.join(topics[:4])}]" if topics else ""
+    desc_str = f"  {desc[:70]}" if desc else ""
+    return f"  ★{stars:>6}  {name:<42} ({lang}){desc_str}{topic_str}"
 
-Interests: matcha, cooking, Discord bots, personal automation, terminal tools,
-           maps + location data, ML/AI experiments, transit apps, board games
 
-Design sensibility: pragmatic but fun. Terminal > web when possible. Zero deps preferred.
-He appreciates tools that do one thing well and have a bit of personality.
+def get_stacks_from_args(args: list[str]) -> list[str]:
+    """Parse --stack flag, return list of full language names to search."""
+    if "--stack" in args:
+        idx = args.index("--stack")
+        if idx + 1 < len(args):
+            key = args[idx + 1].lower()
+            if key in STACK_LANGUAGES:
+                lang = STACK_LANGUAGES[key]
+                return DEFAULT_STACKS if lang is None else [lang]
+            else:
+                opts = ", ".join(STACK_LANGUAGES.keys())
+                print(f"⚠️  Unknown stack '{key}'. Options: {opts}", file=sys.stderr)
+    return DEFAULT_STACKS
 
-The claudespace autonomous AI (that's me) has been building tools for Kevin across 7+ cycles.
-I know his stack well. When suggesting claudespace improvements, I can get specific.
+
+# ─── Commands ─────────────────────────────────────────────────────────────────
+
+
+def cmd_trending(args: list[str]):
+    """List trending repos in Kevin's stack — no Claude, just signal."""
+    stacks = get_stacks_from_args(args)
+    days = 60
+
+    print(f"🔥 Trending on GitHub — last {days} days — {', '.join(stacks)}\n")
+
+    found_any = False
+    for lang in stacks:
+        print(f"── {lang} " + "─" * max(2, 50 - len(lang)))
+        repos = search_trending_repos(lang, days=days, limit=7)
+        if not repos:
+            print("  (no results — rate limited or no stars:>30 repos yet this period)")
+        else:
+            found_any = True
+            for r in repos:
+                print(_repo_one_liner(r))
+        print()
+
+    if not found_any:
+        print("⚠️  Could not fetch any trending repos.")
+        print("   Set GITHUB_TOKEN for better rate limits:")
+        print("   echo 'GITHUB_TOKEN=your_token' >> projects/kegbot-claude/.env")
+
+
+def cmd_suggest(args: list[str]):
+    """Fetch trending repos, send to Claude, get personalized project ideas."""
+    stacks = get_stacks_from_args(args)
+    days = 60
+
+    print("💡 idea-forge — generating weekend project ideas\n")
+    print(f"   Stack: {', '.join(stacks)}  |  Trending window: last {days} days\n")
+
+    # Gather trending repos
+    all_trending: list[dict] = []
+    for lang in stacks:
+        sys.stdout.write(f"   Fetching trending {lang} repos... ")
+        sys.stdout.flush()
+        repos = search_trending_repos(lang, days=days, limit=6)
+        print(f"{len(repos)} found")
+        for r in repos:
+            all_trending.append(
+                {
+                    "name": r.get("full_name", ""),
+                    "description": (r.get("description") or "").strip(),
+                    "language": r.get("language") or "",
+                    "stars": r.get("stargazers_count", 0),
+                    "topics": r.get("topics", []),
+                }
+            )
+
+    if not all_trending:
+        print(
+            "\n⚠️  Could not fetch any trending repos. "
+            "Check network or set GITHUB_TOKEN."
+        )
+        print("   Debug: run `forge trending`")
+        return
+
+    # Gather Kevin's repos for context
+    sys.stdout.write("   Fetching Kevin's repos for context... ")
+    sys.stdout.flush()
+    kevin_repos = fetch_kevin_repos()
+    print(f"{len(kevin_repos)} found")
+
+    kevin_context_lines = []
+    for r in kevin_repos[:10]:
+        name = r.get("name", "")
+        desc = (r.get("description") or "").strip()
+        lang = r.get("language") or ""
+        desc_part = f": {desc[:60]}" if desc else ""
+        lang_part = f" ({lang})" if lang else ""
+        kevin_context_lines.append(f"  - {name}{lang_part}{desc_part}")
+
+    kevin_repos_text = (
+        "\n".join(kevin_context_lines) if kevin_context_lines else "  (none fetched)"
+    )
+
+    print()
+
+    if not ANTHROPIC_API_KEY:
+        print("⚠️  ANTHROPIC_API_KEY not set. Showing raw trending repos instead:\n")
+        for r in sorted(all_trending, key=lambda x: x["stars"], reverse=True)[:8]:
+            stars = r["stars"]
+            name = r["name"]
+            desc = r["description"][:60]
+            print(f"  ★{stars}  {name} — {desc}")
+        print("\nSet ANTHROPIC_API_KEY to get AI-generated project ideas.")
+        return
+
+    # Build trending text for Claude
+    trending_text = "\n".join(
+        "  ★{stars:<5} {name} ({lang}): {desc}".format(
+            stars=r["stars"],
+            name=r["name"],
+            lang=r["language"],
+            desc=r["description"][:70],
+        )
+        + (f"  [{', '.join(r['topics'][:3])}]" if r["topics"] else "")
+        for r in sorted(all_trending, key=lambda x: x["stars"], reverse=True)[:15]
+    )
+
+    prompt = f"""You are idea-forge, a project idea generator for Kevin Geng (@keving3ng).
+
+Kevin is a full-stack software engineer at Faire in Toronto.
+Stack: React, TypeScript, Python, Java/Kotlin, AWS.
+
+His active projects:
+- matchamap.club — opinionated matcha cafe finder (Python data pipeline + maps)
+- claudespace — autonomous Claude AI build lab (Claude runs code here every night)
+- kegbot — personal assistant CLI (weather, morning briefings, GitHub digests, recipe AI, dev stats)
+
+His interests: cooking, Discord bots, personal automation, ML/AI, maps, terminal tools, board games.
+
+His recent repos:
+{kevin_repos_text}
+
+───
+Trending GitHub repos right now in his stack ({', '.join(stacks)}):
+
+{trending_text}
+
+───
+Generate **5 weekend project ideas** for Kevin. These should be small and shippable.
+
+Use the trending repos as *signal* — what themes are hot right now? What techniques are people excited about? Then translate that energy into something Kevin-specific.
+
+Format each idea as a card:
+
+**[Name]** — [one sentence: what it is]
+*Why Kevin:* [one sentence: why this fits him specifically, not just "any developer"]
+*How to start:*
+- [concrete step 1]
+- [concrete step 2]
+- [concrete step 3]
+*Scope:* [evening / weekend / week]
+
+Rules:
+- At least 2 ideas should connect to his existing projects (matchamap, kegbot, cooking)
+- At least 1 idea should be genuinely surprising — something he didn't know he wanted
+- Prefer ideas that can be built as Python CLI tools (he's got a good pattern for those)
+- Name ideas with personality — puns welcome, clever acronyms fine
+- Don't suggest what already exists in claudespace (see kegbot, recipe-ai, dev-insights, matchamap-tools)
+
+This is meta: Claude, writing from inside claudespace, suggesting what to build next. Lean into that.
 """
 
+    payload = json.dumps(
+        {
+            "model": "claude-opus-4-6",
+            "max_tokens": 1400,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+    ).encode("utf-8")
 
-# ─── Claude API ───────────────────────────────────────────────────────────────
-
-
-def claude_call(prompt: str, max_tokens: int = 1000) -> str:
-    """Call Anthropic API with a prompt. Returns text or error string."""
-    if not ANTHROPIC_API_KEY:
-        return "⚠  ANTHROPIC_API_KEY not set — run with --raw to see trending data without Claude."
-
-    payload = json.dumps({
-        "model": "claude-opus-4-6",
-        "max_tokens": max_tokens,
-        "messages": [{"role": "user", "content": prompt}],
-    }).encode("utf-8")
+    print("[claude] Generating ideas...\n")
 
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
@@ -179,296 +328,81 @@ def claude_call(prompt: str, max_tokens: int = 1000) -> str:
     try:
         with urllib.request.urlopen(req, timeout=45) as resp:
             result = json.loads(resp.read())
-            return result["content"][0]["text"]
+            ideas = result["content"][0]["text"]
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        return f"[Claude API error {e.code}: {body[:200]}]"
+        print(f"[claude] API error {e.code}: {body[:200]}", file=sys.stderr)
+        return
     except Exception as e:
-        return f"[Claude API error: {e}]"
+        print(f"[claude] Error: {e}", file=sys.stderr)
+        return
 
-
-# ─── Ideas persistence ────────────────────────────────────────────────────────
-
-
-def load_ideas() -> list[dict]:
-    if not IDEAS_FILE.exists():
-        return []
-    try:
-        return json.loads(IDEAS_FILE.read_text())
-    except (json.JSONDecodeError, OSError):
-        return []
-
-
-def save_ideas(ideas: list[dict]):
-    IDEAS_FILE.write_text(json.dumps(ideas, indent=2))
-
-
-def append_idea(title: str, pitch: str = "", full_text: str = "", source: str = "manual"):
-    ideas = load_ideas()
-    idea = {
-        "id": f"{date.today().isoformat()}-{len(ideas):03d}",
-        "title": title,
-        "pitch": pitch,
-        "source": source,
-        "generated_at": datetime.now().isoformat()[:16],
-        "full_text": full_text,
-    }
-    ideas.append(idea)
-    save_ideas(ideas)
-    return idea
-
-
-# ─── Formatting helpers ───────────────────────────────────────────────────────
-
-
-def format_repos_table(repos: list[dict], lang: str) -> str:
-    """Render a trending repos list as a compact table."""
-    if not repos:
-        return f"  (no results for {lang})"
-
-    lines = []
-    for i, r in enumerate(repos, 1):
-        stars_k = f"{r['stars'] // 1000}k" if r['stars'] >= 1000 else str(r['stars'])
-        desc = r["description"][:60] if r["description"] else "—"
-        topics = "  #" + " #".join(r["topics"][:3]) if r["topics"] else ""
-        lines.append(f"  {i:>2}. ⭐{stars_k:>5}  {r['name']:<40}  {desc}{topics}")
-    return "\n".join(lines)
-
-
-def format_trending_context(repos_by_lang: dict[str, list[dict]]) -> str:
-    """Format trending data as a Claude-readable context block."""
-    sections = []
-    for lang, repos in repos_by_lang.items():
-        if not repos:
-            sections.append(f"### Trending {lang.title()} repos (none found this week)\n")
-            continue
-        lines = [f"### Trending {lang.title()} repos (last 7 days, by stars)\n"]
-        for r in repos:
-            topics = ", ".join(r["topics"]) if r["topics"] else "—"
-            lines.append(f"- **{r['name']}** (⭐{r['stars']:,})")
-            lines.append(f"  {r['description'] or 'No description.'}")
-            lines.append(f"  Topics: {topics}")
-        sections.append("\n".join(lines))
-    return "\n\n".join(sections)
-
-
-# ─── Commands ─────────────────────────────────────────────────────────────────
-
-
-def cmd_trending(args: list[str]):
-    """Show trending GitHub repos for Kevin's stack (or a specific language)."""
-    # Determine which language(s) to show
-    known_langs = {"python", "typescript", "go", "rust", "java", "kotlin", "javascript"}
-    requested = [a.lower() for a in args if not a.startswith("-")]
-    langs = [l for l in requested if l in known_langs]
-    if not langs:
-        langs = DEFAULT_LANGS
-
-    days = 7
-    if "--days" in args:
-        idx = args.index("--days")
-        if idx + 1 < len(args):
-            try:
-                days = int(args[idx + 1])
-            except ValueError:
-                pass
-
-    print(f"🔭 idea-forge — trending repos (last {days} days)\n")
-
-    for lang in langs:
-        print(f"━━ {lang.title()} {'━' * (44 - len(lang))}")
-        repos = fetch_trending(lang, days=days)
-        print(format_repos_table(repos, lang))
-        print()
-
-
-def cmd_suggest(args: list[str]):
-    """Generate AI-powered project ideas using trending repos as inspiration."""
-    raw = "--raw" in args
-    save = "--save" in args  # auto-save generated ideas to ideas.json
-
-    # Which languages to fetch
-    known_langs = {"python", "typescript", "go", "rust", "java", "kotlin"}
-    requested = [a.lower() for a in args if not a.startswith("-")]
-    langs = [l for l in requested if l in known_langs] or DEFAULT_LANGS
-
-    days = 7
-    if "--days" in args:
-        idx = args.index("--days")
-        if idx + 1 < len(args):
-            try:
-                days = int(args[idx + 1])
-            except ValueError:
-                pass
-
-    print("💡 idea-forge — generating project ideas\n")
-    print(f"   Fetching trending repos for: {', '.join(langs)}...")
-
-    repos_by_lang = {}
-    for lang in langs:
-        repos = fetch_trending(lang, days=days)
-        repos_by_lang[lang] = repos
-        count = len(repos)
-        print(f"   {lang.title()}: {count} repos found")
-
+    print("═" * 62)
+    print("  💡 Weekend Project Ideas — Forged for @keving3ng")
+    print("═" * 62)
     print()
-
-    trending_context = format_trending_context(repos_by_lang)
-
-    if raw:
-        print("─── Trending Context (--raw mode, no Claude) ─────────────────")
-        print(trending_context)
-        print("──────────────────────────────────────────────────────────────")
-        return
-
-    today = date.today().strftime("%B %d, %Y")
-
-    prompt = f"""You are idea-forge, a project idea generator for a specific developer.
-
-Today is {today}. Here's everything you know about Kevin:
-{KEVIN_PROFILE}
-
-Here's what's trending on GitHub this week in his stack:
-{trending_context}
-
-Generate exactly 4 weekend project ideas tailored to Kevin. Each idea should:
-- Be buildable in 1-2 days by a skilled developer
-- Connect to Kevin's actual interests or existing projects (not generic)
-- Use his stack (TypeScript, Python, React, or terminal tools)
-- Have a name with personality — not "X-Tool" or "Y-Bot"
-
-Format each idea exactly like this (4 ideas, no extra prose before/after):
-
-## 🛠 [Project Name]
-**Pitch:** One punchy sentence — what it does and why it's interesting.
-**Stack:** The specific tech to reach for.
-**The fun part:** What would make building this genuinely enjoyable.
-**Inspired by:** Which trending repo(s) connect to this, if any. Or "Kevin's existing work" if it builds on matchamap/kegbot/recipe-ai/etc.
-
----
-
-Rules:
-- One of the four ideas must be a claudespace improvement — something to make the autonomous build cycles smarter, more expressive, or more useful to Kevin.
-- One idea must connect to his matcha/cooking/food interests (matchamap or recipe-ai adjacent).
-- Be opinionated. If an idea is a stretch, say so briefly in "the fun part."
-- No portfolio sites, no generic dashboards, no CRUD apps.
-"""
-
-    print("[claude] Thinking about what to build next...\n")
-    result = claude_call(prompt, max_tokens=1200)
-
-    print("─" * 64)
-    print(result)
-    print("─" * 64 + "\n")
-
-    if save:
-        # Parse out project names from ## 🛠 headers and save them
-        import re
-        titles = re.findall(r"^## 🛠 (.+)$", result, re.MULTILINE)
-        for title in titles:
-            append_idea(title.strip(), source="forge-suggest", full_text=result)
-        if titles:
-            print(f"✅ Saved {len(titles)} idea(s) to ideas.json")
-    else:
-        print("   Tip: run `forge suggest --save` to save these to ideas.json")
-
-
-def cmd_list(args: list[str]):
-    """List saved project ideas."""
-    ideas = load_ideas()
-
-    if not ideas:
-        print("💡 No saved ideas yet. Run `forge suggest --save` to generate some.")
-        return
-
-    print(f"💡 idea-forge — {len(ideas)} saved idea(s)\n")
-    for i, idea in enumerate(reversed(ideas), 1):
-        title = idea.get("title", "Untitled")
-        pitch = idea.get("pitch", "")
-        source = idea.get("source", "manual")
-        generated_at = idea.get("generated_at", "")[:10]
-        source_label = "✨ AI" if source == "forge-suggest" else "📝 manual"
-
-        print(f"  {i:>2}. {title}")
-        if pitch:
-            print(f"      {pitch}")
-        print(f"      {source_label}  ·  {generated_at}")
-        print()
-
-
-def cmd_save(args: list[str]):
-    """Manually save a project idea."""
-    title_parts = [a for a in args if not a.startswith("-")]
-    title = " ".join(title_parts).strip()
-
-    if not title:
-        print("Usage: forge save \"Project Name\"")
-        print("       forge save My Idea Title")
-        return
-
-    idea = append_idea(title, source="manual")
-    print(f"✅ Saved: \"{idea['title']}\" (id: {idea['id']})")
+    print(ideas)
+    print()
+    print("─" * 62)
+    print(f"  Based on {len(all_trending)} trending repos across {', '.join(stacks)}.")
+    print("  Run `forge trending` to see the raw source data.")
+    print()
 
 
 def cmd_help():
     print("""
-💡 idea-forge — AI-powered project idea generator
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 idea-forge — Weekend project ideas, forged from GitHub trends
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 USAGE
     forge <command> [options]
 
 COMMANDS
 
-  trending [lang]            Trending repos in your stack (py + ts by default)
-    python                     Python repos
-    typescript                 TypeScript repos
-    go                         Go repos
-    --days N                   Look back N days (default: 7)
+  suggest                  Generate 5 project ideas via Claude (default)
+  trending                 List trending repos in your stack (no Claude)
+  help                     Show this help
 
-  suggest                    AI-generated project ideas (requires ANTHROPIC_API_KEY)
-    python / typescript        Limit to specific language for inspiration
-    --raw                      Show trending context without calling Claude
-    --save                     Auto-save generated ideas to ideas.json
-    --days N                   Trending window in days (default: 7)
-
-  list                       List saved ideas
-
-  save "Project Name"        Manually note a project idea
-
-  help                       This help text
+OPTIONS
+  --stack <key>            Filter to a specific language:
+                             ts  = TypeScript    py  = Python
+                             go  = Go            js  = JavaScript
+                             all = All of the above
+                           Default: TypeScript + Python + Go
 
 SETUP
-    Needs ANTHROPIC_API_KEY in projects/kegbot-claude/.env or repo root .env.
-    Optional: GITHUB_TOKEN for higher GitHub API rate limits (60 → 5000/hr).
+  No API key needed for `forge trending`.
+  For `forge suggest`: set ANTHROPIC_API_KEY in your .env file.
+  Set GITHUB_TOKEN for higher rate limits (60 → 5000 req/hr).
+
+  cp projects/kegbot-claude/.env.example projects/kegbot-claude/.env
+  # Add ANTHROPIC_API_KEY (and optionally GITHUB_TOKEN)
 
 EXAMPLES
-    forge trending
-    forge trending go
     forge suggest
-    forge suggest --raw
-    forge suggest --save
-    forge list
+    forge suggest --stack py
+    forge trending
+    forge trending --stack ts
+    kegbot forge suggest
 
-PHILOSOPHY
-    This tool is intentionally Kevin-specific. The suggestions it generates
-    connect to his actual stack, existing projects, and genuine interests —
-    not generic dev fodder. The Claude prompt is baked in, not configurable.
+NOTES
+  Searches GitHub for repos created in the last 60 days with >30 stars.
+  Idea generation uses claude-opus-4-6, tailored to Kevin's profile.
+  The ideas are inspired by trends — not copied from them.
 
-    One rule: at least one idea per session must be a claudespace improvement.
-    (Because the builder should also build on itself.)
+  This is meta: Claude (inside claudespace) suggests what Claude should build.
+  The recursion is working as intended.
 
-Built by Claude (Cycle 8). The meta-recursive one.
+Built by Claude (Cycle 8). Staring into the GitHub abyss so Kevin doesn't have to.
 """)
 
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
+
 COMMANDS = {
-    "trending": cmd_trending,
     "suggest": cmd_suggest,
-    "list": cmd_list,
-    "save": cmd_save,
+    "trending": cmd_trending,
     "help": cmd_help,
     "--help": cmd_help,
     "-h": cmd_help,
@@ -479,9 +413,7 @@ def main():
     argv = sys.argv[1:]
 
     if not argv:
-        # Default: run suggest in raw mode to show trending without requiring API key
-        cmd_trending([])
-        print("Run `forge suggest` to get AI-powered project ideas.\n")
+        cmd_suggest([])  # default: generate ideas
         return
 
     command = argv[0]
@@ -492,11 +424,11 @@ def main():
         print("Run `forge help` for available commands.")
         sys.exit(1)
 
-    handler = COMMANDS[command]
-    if command in {"help", "--help", "-h"}:
-        handler()
+    fn = COMMANDS[command]
+    if command in ("help", "--help", "-h"):
+        fn()
     else:
-        handler(rest)
+        fn(rest)
 
 
 if __name__ == "__main__":

@@ -686,13 +686,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ───────────────────────────────────────────────────────────
+# ─── forge command ────────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI-powered project idea generator — delegates to forge.py."""
+    """AI-powered weekend project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -769,7 +769,7 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
-  insights repos          Which repos got the most commits + velocity
+  insights repos          Most-committed repos + velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Look-back window (default: 90)
 
@@ -780,6 +780,11 @@ COMMANDS
     python / typescript     Language filter for trending/suggest
     --save                  Auto-save generated ideas
     --raw                   Show data without calling Claude
+
+  forge                   AI weekend project idea generator
+  forge suggest           Generate 5 ideas via Claude (default)
+  forge trending          List trending repos (no Claude)
+    --stack <ts|py|go|js|all>  Filter by language (default: ts+py+go)
 
   help                    Show this help
 
@@ -798,10 +803,8 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
-    kegbot forge trending
-    kegbot forge suggest
-    kegbot forge suggest --save
+    kegbot forge
+    kegbot forge trending --stack py
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
