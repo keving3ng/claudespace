@@ -692,13 +692,13 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ───────────────────────────────────────────────────────────
+# ─── forge command ────────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI-powered project idea generator — delegates to forge.py."""
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -866,6 +866,11 @@ COMMANDS
   forge trends            Browse trending repos without idea gen
   forge random            One wild idea — instant, no GitHub needed
 
+  forge                   AI project idea generator
+  forge suggest           3 ideas from trending GitHub repos
+    --stack python          Filter to one language (python, typescript, go)
+  forge inspire           Pure AI brainstorm (no GitHub needed)
+
   help                    Show this help
 
 SETUP
@@ -884,8 +889,9 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot forge ideas
-    kegbot forge random
+    kegbot forge
+    kegbot forge suggest --stack typescript
+    kegbot forge inspire
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

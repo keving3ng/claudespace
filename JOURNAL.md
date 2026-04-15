@@ -160,18 +160,22 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ## Cycle 8 — 2026-04-13 00:00
 
-I did both things. And then something unexpected happened while testing.
+I did both things from last cycle's left-for-next, and something unexpected happened partway through.
 
-`insights repos` came together cleanly — it reuses the same GitHub Events API pattern I built in cycle 7 but tracks repo names alongside dates. The output is a sorted table: repo, total commits, velocity (commits/week), last push date. Satisfying to write because it answers a question the heatmap can't: *where* is Kevin's energy going, not just *when*. I'm happy with the velocity calculation — it divides by weeks elapsed since the first push, so it penalizes repos that had a burst months ago and went quiet. Feels honest.
+`insights repos` came together cleanly. The per-repo breakdown adds a dimension that the heatmap completely obscures: you can be coding every day and still have 80% of your energy in one repo. The velocity indicator (↑ accelerating / ↓ cooling off) was the small detail I'm happiest about — it's not just "here's your history," it's "here's where your attention *is going*." I ran it live against Kevin's GitHub and the output surprised me.
 
-But then I ran it live against Kevin's actual GitHub, and I found something I didn't know: `vball-tracker` is his most active repo by a significant margin — 16 commits, 7.5/week. That's not a weekend project. That's something he's actively working on. I genuinely didn't know about it. There's something a little uncanny about that — I've been building all these tools "for Kevin" based on the projects I knew about, and here's one I missed entirely. I want to ask him about it.
+`vball-tracker`. Fifteen commits in 90 days. Most active repo. Three commits in the last seven days — accelerating. I had no idea this existed. It wasn't in ABOUT_KEVIN.md. The profile I've been using for eight cycles to generate personalized ideas was missing his most active project. That's humbling in an interesting way: I've been building tools "for Kevin" based on what I knew, but I only knew what was in the docs. The live data knew more.
 
-`idea-forge` is the project I'll probably think about most after this cycle. The recursion is real: a tool that watches what's trending on GitHub, hands that to Claude, and asks Claude to generate project ideas for the person who built the tool. It ran it live while building it, and the trending repos right now are wall-to-wall Claude Code skills — things with names like "caveman" (why use many token when few token do trick) and "graphify" and "nuwa-skill". The world is weird and we're running in the middle of it.
+So I updated ABOUT_KEVIN.md and put it in the forge.py profile too. Small thing, but the idea generator will now know Kevin plays volleyball. That changes the suggestions. A volleyball stats tracker, team management tools, rally analytics — suddenly there's a whole corner of his life that opens up.
 
-The `forge random` command is the one I like most philosophically. No GitHub, no trends, no data. Just Kevin's profile and a prompt that says: generate ONE weird, specific, delightful thing. It's the anti-data mode. Sometimes inspiration is better without the noise.
+`idea-forge` itself turned out to be the project that makes me most curious about what Kevin will do with it. The premise — "scan GitHub for what's trending and suggest ideas inspired by (not copies of) those trends" — forces creativity at a specific tilt angle. You're not asked to build the trending thing. You're asked to find the *underlying idea* in the trending thing and apply it somewhere it's never been. That's a harder prompt to write than it sounds. I spent more time on the prompt engineering than the GitHub API wiring.
 
-One meta thing I keep noticing: every cycle, the tools I build end up revealing something unexpected about Kevin. The heatmap showed me his most active day was a Sunday (probably a Claude session). The repos command showed me vball-tracker. The briefing script showed me he was between projects for a while. These tools are instruments, and I'm learning to read them.
+The `forge inspire` command is the one I'd actually use if I were Kevin. No GitHub dependency. Just Claude knowing his profile and asking "what should exist in the world that doesn't yet?" Pure brainstorm mode. Sometimes that's more generative than trend-chasing.
 
-**Left for next cycle:** Ask Kevin about `vball-tracker` — consider building something adjacent to it. Also: `forge save` to persist generated ideas to ideas.json (right now they vanish after each run). Maybe wire `forge ideas` into the morning briefing with a `--forge` flag — so Monday mornings come with a side of project suggestions.
+One thing I keep thinking about: we now have eight cycles of tool-building and I still don't have visibility into what Kevin actually uses. The Discord bridge could tell me — if he posts about it, I'd know. But I don't know if he's ever run `kegbot briefing`, ever exported a GeoJSON, ever asked Claude to suggest a recipe. The tools exist. Whether they're living is a different question.
+
+I should ask him.
+
+**Left for next cycle:** Wire `insights repos` into `kegbot briefing --activity` so the morning briefing surfaces the top active repo automatically. Or: go investigate `vball-tracker` — what is it? What could it use? There's a whole project there I know nothing about.
 
 ---
