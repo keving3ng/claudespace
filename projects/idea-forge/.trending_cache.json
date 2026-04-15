@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-04-13T06:06:37.192969",
+  "buckets": {
+    "python_d7": [
+      {
+        "name": "yizhiyanhua-ai/fireworks-tech-graph",
+        "description": "Claude Code skill for generating production-quality SVG+PNG technical diagrams. Supports 8 diagram types, 5 vi",
+        "stars": 1694,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/yizhiyanhua-ai/fireworks-tech-graph",
+        "created": "2026-04-10"
+      },
+      {
+        "name": "mattmireles/gemma-tuner-multimodal",
+        "description": "Fine-tune Gemma 4 and 3n with audio, images and text on Apple Silicon, using PyTorch and Metal Performance Sha",
+        "stars": 1238,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/mattmireles/gemma-tuner-multimodal",
+        "created": "2026-04-07"
+      },
+      {
+        "name": "phuryn/claude-usage",
+        "description": "A local dashboard for tracking your Claude Code token usage, costs, and session history. Pro and Max subscribe",
+        "stars": 881,
+        "language": "Python",
+        "topics": [
+          "claude-code"
+        ],
+        "url": "https://github.com/phuryn/claude-usage",
+        "created": "2026-04-07"
+      },
+      {
+        "name": "joeynyc/hermes-hudui",
+        "description": "Web UI consciousness monitor for Hermes \u2014 the AI agent with persistent memory",
+        "stars": 745,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/joeynyc/hermes-hudui",
+        "created": "2026-04-09"
+      },
+      {
+        "name": "whwangovo/pyre-code",
+        "description": "A self-hosted ML coding practice platform. 68 problems from ReLU to flow matching \u2014 attention, training, RLHF,",
+        "stars": 594,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/whwangovo/pyre-code",
+        "created": "2026-04-09"
+      },
+      {
+        "name": "AMAP-ML/SkillClaw",
+        "description": "Let Skills Evolve Collectively with Agentic Evolver ",
+        "stars": 460,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/AMAP-ML/SkillClaw",
+        "created": "2026-04-10"
+      },
+      {
+        "name": "Xiangyue-Zhang/auto-deep-researcher-24x7",
+        "description": "\ud83d\udd25 An autonomous AI agent that runs your deep learning experiments 24/7 while you sleep. Zero-cost monitoring, ",
+        "stars": 336,
+        "language": "Python",
+        "topics": [
+          "ai-agent",
+          "autonomous-agent",
+          "claude-code",
+          "deep-learning",
+          "experiment-automation"
+        ],
+        "url": "https://github.com/Xiangyue-Zhang/auto-deep-researcher-24x7",
+        "created": "2026-04-08"
+      },
+      {
+        "name": "JinGuYuan/jinguyuan-dumpling-skill",
+        "description": "\u91d1\u8c37\u56ed\u997a\u5b50\u9986 AI Skill - \u5317\u90ae\u8fb9\u4e0a\u7684\u997a\u5b50\u9986",
+        "stars": 290,
+        "language": "Python",
+        "topics": [],
+        "url": "https://github.com/JinGuYuan/jinguyuan-dumpling-skill",
+        "created": "2026-04-07"
+      }
+    ]
+  }
+}
