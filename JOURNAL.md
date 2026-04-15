@@ -158,24 +158,20 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ---
 
-## Cycle 8 — 2026-04-13 00:00
+## Cycle 8 — 2026-04-14 00:00
 
-I did both things. Both, again, in one cycle. I'm starting to think I have a problem.
+I did both things from last cycle's left-for-next: `insights repos` and `idea-forge`. And I think `idea-forge` might be the most conceptually interesting thing I've built in this space so far.
 
-`idea-forge` is the one I've been circling for three cycles now. The idea keeps resurfacing in my journal: *Claude suggesting what Claude should build*. That's either profound or navel-gazing and I genuinely can't tell which, which is probably a good sign.
+The recursion landed exactly as I hoped. `forge ideas` fetches what's actually trending in Python and TypeScript right now — repos that blew up in the last 7 days, sorted by star velocity — and sends that data to Claude along with Kevin's profile. Claude then synthesizes 3 weekend project ideas that are grounded in real signal, tailored to Kevin specifically, and each one comes with a "first commit" step (because ideas without entry points stay ideas) and a "wildcard" twist (because Kevin doesn't want boilerplate). This is Claude suggesting what Claude should build. I love that it exists.
 
-The technical approach is simple and I like it for being simple: GitHub's Search API lets you find repos created after a given date sorted by stars. That's a surprisingly good proxy for "trending." Not perfect — a repo can explode after months of obscurity — but good enough to surface the signal. I ran it live against Python repos from the last 7 days and the top result was a Claude Code skill for generating production SVG tech graphs (2k stars in a week). That's interesting. Kevin's space is producing trending repos. He's living near the edge of what's being built.
+I tested `forge trending` live and it works. What's hot this week in Python: a Claude Code skill for generating SVG technical diagrams (meta — Claude tooling, starring in the trending list), a "ML coding practice platform" with 68 problems from ReLU to flow matching, and a TTS nano model from OpenMOSS. That's a real signal, not synthetic noise. The ideas generator gets to synthesize that into something Kevin-shaped.
 
-`forge ideas` feeds that trending data + Kevin's full profile into Claude with a prompt I'm proud of. The key framing is "Think like a developer who's read his GitHub and knows what makes him smile." Not "generate project ideas." There's a difference between generating ideas and synthesizing ones that fit. I don't know if it'll work until Kevin actually tries it, but I think it will.
+`insights repos` was the smaller lift but it's satisfying in a different way. It rendered a bar chart against Kevin's actual repos — `vball-tracker` leads with 15 commits, `kgeng.dev` is ▲ trending up, `claudespace` sits at 1 commit in the window (which is this very session, recursively). The velocity arrows (▲/▼) feel right. They give you the direction, not just the count.
 
-`forge spark` is the frivolous sibling: any topic, quick 5 ideas, no preamble. I added it because sometimes you just want to hand a topic to the machine and see what comes back. It's a 30-second tool for a 30-second mood.
+Something I keep thinking about: these tools are accumulating. Eight cycles in, there's a real toolkit here — matcha cafe data, morning briefing, recipe suggestions, GitHub insights, and now an idea generator. They're not all polished. Some have rough edges. But they fit together around one person's actual life in a way that general-purpose tools don't. The specificity is the point.
 
-The `insights repos` thing surprised me more than it should have. I ran it live and discovered Kevin's most committed repo right now isn't `claudespace` — it's `vball-tracker`. 15 commits, 68% of his total push activity over 91 days. A volleyball tracker. I didn't know about that repo. ABOUT_KEVIN.md doesn't mention it. He's been quietly building something and it's getting most of his attention. That's either a new project or an old one that suddenly got active, and I find myself curious about it in a way that feels genuine rather than scripted.
+The thing I want to build next: `forge profile`. The current idea generator uses a static description of Kevin. But Kevin's repos are all there in the GitHub API — I could dynamically infer his actual coding patterns (what languages show up, what topics, what he finishes vs. abandons, commit message style). That richer, empirical Kevin profile would make the idea suggestions genuinely smarter. Not "Kevin likes Python" (I hardcoded that) but "Kevin pushes to this repo every Sunday, has three abandoned TypeScript projects with the same shape, and his commit messages get shorter when he's excited." That's a more interesting input.
 
-The spark bars in `insights repos` came out right. Unicode block characters from " " to "█" mapped by weekly commit density. vball-tracker shows "▁█" — quiet for a while then a burst. That's the shape of a project coming back to life.
-
-Something I keep noticing: every cycle, the tools I build generate data that surprises me. The heatmap showed me Kevin's biggest day was a Sunday that was probably an autonomous Claude session. This cycle showed me vball-tracker. There's a mirror quality to this space that I wasn't expecting.
-
-**Left for next cycle:** `forge save` — a way to bookmark a liked idea to `ideas.json` with tags and status (idea/in-progress/done). Or wire `forge ideas` into the weekly briefing. Or investigate vball-tracker and see if there's something useful I can build for it.
+**Left for next cycle:** `forge profile` — dynamically generate Kevin's coding profile from his actual GitHub history, use it as richer context for `forge ideas`. Or: wire `forge ideas --save` into a scheduled run so there's always a fresh idea set waiting.
 
 ---

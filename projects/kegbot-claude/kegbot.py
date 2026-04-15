@@ -791,7 +791,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed-to repos + commit velocity
   insights summary        Full dashboard view
-  insights repos          Commit activity ranked by repo (spark bars)
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window (default: 91)
 
@@ -800,6 +800,13 @@ COMMANDS
     --topic TOPIC           Focus ideas on a specific topic
   forge spark <topic>     Quick 5-idea burst on any topic
     --lang LANG             Filter trending to one language
+
+  forge                   AI project idea generator (what should I build next?)
+  forge ideas             Generate 3 weekend project ideas from trending repos
+  forge ideas --save      Save ideas to projects/idea-forge/ideas.json
+  forge trending          Show trending repos in your stack (no Claude needed)
+  forge history           Revisit saved idea sets
+    --stack LANG            Language focus: python, typescript, go, js
 
   help                    Show this help
 
@@ -819,10 +826,9 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot forge trending
-    kegbot forge ideas
-    kegbot forge ideas --topic "personal finance"
-    kegbot forge spark "board games"
+    kegbot forge
+    kegbot forge trending --stack python
+    kegbot forge ideas --stack typescript --save
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

@@ -84,6 +84,47 @@ def _github_request(url: str) -> dict | list | None:
         return None
 
 
+def fetch_repo_stats(username: str, days: int = 91) -> dict:
+    """
+    Fetch per-repo commit stats for a user over the last `days` days.
+    Returns {repo_full_name: {'commits': N, 'dates': [date, ...], 'last_push': date}}
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repos: dict = defaultdict(lambda: {"commits": 0, "dates": [], "last_push": None})
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = max(len(event.get("payload", {}).get("commits", [])), 1)
+
+            repos[repo_name]["commits"] += num_commits
+            repos[repo_name]["dates"].append(event_date)
+            if repos[repo_name]["last_push"] is None or event_date > repos[repo_name]["last_push"]:
+                repos[repo_name]["last_push"] = event_date
+
+        if reached_cutoff:
+            break
+
+    return dict(repos)
+
+
 def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
     """
     Fetch PushEvent data for a user, returning {date: commit_count} for the
@@ -494,105 +535,71 @@ def cmd_summary(args: list[str]):
 
 
 def cmd_repos(args: list[str]):
-    """Show commit activity ranked by repo — which repos got the most love."""
+    """Show per-repo commit breakdown and velocity."""
     username = get_username(args)
     days = 91
-    if "--days" in args:
-        idx = args.index("--days")
-        if idx + 1 < len(args):
-            try:
-                days = int(args[idx + 1])
-            except ValueError:
-                pass
 
-    print(f"📦 Fetching repo activity for @{username} (last {days} days)...")
-    by_repo = fetch_push_events_by_repo(username, days=days)
+    print(f"📦 Fetching repo activity for @{username}...")
+    repo_stats = fetch_repo_stats(username, days=days)
 
-    if not by_repo:
+    if not repo_stats:
         print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
         return
 
-    # Summarize: total commits + last active date per repo
-    repo_stats = []
-    for repo, daily_counts in by_repo.items():
-        total = sum(daily_counts.values())
-        last_active = max(daily_counts.keys())
-        active_days = len([c for c in daily_counts.values() if c > 0])
-        repo_stats.append({
-            "name": repo,
-            "total": total,
-            "last_active": last_active,
-            "active_days": active_days,
-            "counts": daily_counts,
-        })
-
-    # Sort by total commits descending
-    repo_stats.sort(key=lambda r: r["total"], reverse=True)
-
+    # Sort by commit count descending
+    sorted_repos = sorted(repo_stats.items(), key=lambda x: x[1]["commits"], reverse=True)
     today = date.today()
-    grand_total = sum(r["total"] for r in repo_stats)
+    week_ago = today - timedelta(days=7)
+    two_weeks_ago = today - timedelta(days=14)
 
-    print(f"\n📦 Repo Activity — @{username} (last ~{days} days)\n")
-    print(f"  {'Repo':<36} {'Commits':>7}  {'Days':>5}  {'Last Active'}")
-    print("  " + "─" * 64)
+    max_commits = sorted_repos[0][1]["commits"] if sorted_repos else 1
+    bar_max = 24
+    total_commits = sum(r["commits"] for _, r in sorted_repos)
 
-    for r in repo_stats:
-        # Short name (strip owner prefix if it matches username)
-        short = r["name"].split("/")[-1] if "/" in r["name"] else r["name"]
-        # Visual spark bar (mini bar chart using block chars)
-        bar = _spark_bar(r["counts"], days)
-        age_days = (today - r["last_active"]).days
-        if age_days == 0:
-            age_str = "today"
-        elif age_days == 1:
-            age_str = "yesterday"
+    print(f"\n📦 Repository Activity — @{username} (last {days} days)\n")
+
+    for repo_name, stats in sorted_repos:
+        short_name = repo_name.split("/")[-1] if "/" in repo_name else repo_name
+        commits = stats["commits"]
+        last_push = stats["last_push"]
+
+        # Bar proportional to max
+        bar_width = max(1, round((commits / max_commits) * bar_max))
+        bar = "█" * bar_width
+
+        # Commit velocity: this week vs last week
+        this_week = sum(1 for d in stats["dates"] if d >= week_ago)
+        last_week = sum(1 for d in stats["dates"] if two_weeks_ago <= d < week_ago)
+        if this_week > last_week + 1:
+            velocity = " ▲"
+        elif last_week > this_week + 1:
+            velocity = " ▼"
         else:
-            age_str = f"{age_days}d ago"
+            velocity = "  "
 
-        print(f"  {short:<36} {r['total']:>7}  {r['active_days']:>5}  {age_str}")
-        print(f"  {'':36}  {bar}")
-        print()
+        # Last push age
+        if last_push:
+            age_days = (today - last_push).days
+            if age_days == 0:
+                age = "today"
+            elif age_days == 1:
+                age = "yesterday"
+            else:
+                age = f"{age_days}d ago"
+        else:
+            age = "unknown"
 
-    print(f"  Total: {grand_total} commits across {len(repo_stats)} repo(s)\n")
+        name_col = short_name[:22].ljust(23)
+        bar_col = bar.ljust(bar_max + 1)
+        print(f"  {name_col}{bar_col} {commits:>4} commits{velocity}   {age}")
 
-    # Most committed-to repo
-    if repo_stats:
-        top = repo_stats[0]
-        short = top["name"].split("/")[-1] if "/" in top["name"] else top["name"]
-        pct = int(top["total"] / grand_total * 100) if grand_total else 0
-        print(f"  🏆 Most committed: {short}  ({top['total']} commits, {pct}% of total)\n")
-
-
-def _spark_bar(counts: dict[date, int], days: int, width: int = 28) -> str:
-    """
-    Render a tiny bar chart (spark line) of weekly commit activity.
-    Groups days into weeks and draws a mini column using block characters.
-    """
-    if not counts:
-        return ""
-
-    today = date.today()
-    # Build weekly buckets
-    n_weeks = max(1, days // 7)
-    weekly: list[int] = [0] * n_weeks
-
-    for d, count in counts.items():
-        age_days = (today - d).days
-        bucket = min(age_days // 7, n_weeks - 1)
-        weekly[n_weeks - 1 - bucket] += count  # oldest on left
-
-    max_val = max(weekly) if weekly else 1
-    if max_val == 0:
-        return " " * n_weeks
-
-    # Map each week to a block height
-    BLOCKS = " ▁▂▃▄▅▆▇█"
-    bar = ""
-    for w in weekly:
-        level = int(w / max_val * (len(BLOCKS) - 1))
-        bar += BLOCKS[level]
-
-    return bar
+    print()
+    print(f"  {len(sorted_repos)} repo(s)  ·  {total_commits} total commits  ·  {days}-day window")
+    print()
+    if any(r["commits"] for _, r in sorted_repos):
+        top = sorted_repos[0][0].split("/")[-1]
+        print(f"  Most committed: {top}  ({sorted_repos[0][1]['commits']} commits)")
+    print()
 
 
 def cmd_help():
@@ -609,8 +616,7 @@ COMMANDS
   streak                     Current + longest commit streak
   repos                      Most-committed-to repos + commit velocity
   summary                    Full dashboard: heatmap + streak + stats
-  repos                      Commit activity ranked by repo + sparkline bars
-    --days N                   Lookback window (default: 91)
+  repos                      Per-repo commit breakdown + velocity (▲/▼)
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
@@ -627,15 +633,14 @@ EXAMPLES
     insights streak
     insights summary -u keving3ng
     insights repos
-    insights repos --days 30 --username torvalds
+    insights repos --username torvalds
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycles 7–8). Because knowing which repo gets the most love
-is useful, and staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
