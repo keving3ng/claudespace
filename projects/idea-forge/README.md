@@ -1,70 +1,75 @@
 # idea-forge
 
-> The meta-project. Claude suggesting what Claude should build next.
+> AI weekend project idea generator, personalized to Kevin's stack.
 
-An AI-powered weekend project idea generator. Scans trending GitHub repos in Kevin's tech stack, then uses Claude to generate 3 personalized project ideas with rough implementation plans.
+Watches what's trending on GitHub in Python, TypeScript, and Go, then uses Claude to generate weekend project ideas *specifically for you* — not generic tutorials, not portfolio padding. Things you'd actually build and use.
 
-Zero external dependencies. Pure stdlib + Anthropic API.
+The meta part: an AI suggesting what an AI should build next. It's recursive and I'm not apologizing.
 
 ---
 
-## Usage
+## Commands
 
 ```bash
-# Generate 3 project ideas (requires ANTHROPIC_API_KEY)
-python forge.py ideas
+# Generate 3 project ideas from what's trending right now (default)
+python idea_forge.py forge
 
-# Show trending repos in Kevin's stack (no API key needed)
-python forge.py trending
+# Narrower window — hotter, more recent repos
+python idea_forge.py forge --days 7
 
-# Filter trending to a specific language
-python forge.py trending --lang python
-python forge.py trending --lang typescript
+# Focus on one language
+python idea_forge.py forge --language python
 
-# See which repos Claude used for inspiration
-python forge.py ideas --verbose
+# Preview the trending repos without calling Claude
+python idea_forge.py forge --raw
 
-# Post ideas to Discord
-python forge.py ideas --discord
+# Just see what's trending (no idea generation, faster)
+python idea_forge.py trending
+python idea_forge.py trending --language typescript
+
+# One quick off-the-cuff idea, no analysis needed
+python idea_forge.py spark
+
+# Save a good idea for later
+python idea_forge.py save "Terminal Matcha Timer"
+python idea_forge.py save "My CLI" --desc "does the thing"
+
+# List saved ideas
+python idea_forge.py list
 ```
 
-Via kegbot:
+## Via kegbot
+
 ```bash
-kegbot ideas
+kegbot ideas              # same as idea_forge.py forge
 kegbot ideas trending
-kegbot ideas trending --lang go
+kegbot ideas spark
+kegbot ideas list
 ```
-
----
-
-## How it works
-
-1. **Fetch trending repos** via GitHub Search API — repos created in the last 30 days with >50 stars, sorted by stars, across Python / TypeScript / JavaScript / Go
-2. **Build a context prompt** with Kevin's profile (stack, projects, interests) + the trending data
-3. **Ask Claude Opus** to suggest 3 ideas that are: inspired by (not copies of) the trending repos, buildable in a weekend, connected to something Kevin actually cares about
-
----
 
 ## Setup
 
-Add `ANTHROPIC_API_KEY` to `projects/kegbot-claude/.env`:
+No API key needed for `trending` and `--raw` mode.
 
+For full idea generation:
+
+```bash
+# Add to kegbot-claude/.env or repo root .env:
+ANTHROPIC_API_KEY=your_key_here
+
+# Optional — removes GitHub rate limit (60 → 5000 req/hr):
+GITHUB_TOKEN=your_github_token
 ```
-ANTHROPIC_API_KEY=sk-ant-...
-GITHUB_TOKEN=ghp_...   # optional but recommended (higher rate limits)
-```
+
+## How it works
+
+1. Queries the GitHub Search API for repos created in the last N days with meaningful traction (≥5 stars), sorted by stars
+2. Pulls the top 4 repos from each of Kevin's primary languages (Python, TypeScript, Go)
+3. Sends the batch to Claude with Kevin's full profile as context
+4. Claude generates 3 project ideas *inspired by* (not copies of) the trends, each with a pitch, weekend build plan, stack recommendation, and "Kevin's twist"
+
+The ideas are personalized. If Claude sees a trending knowledge-base tool written in Go, it won't suggest "build a knowledge base." It might suggest "build a matcha-log that knows your flavor notes and suggests cafes," because that's the kind of thing Kevin would actually use.
 
 ---
 
-## Output format
-
-Each idea includes:
-- **What it is** — one concrete sentence
-- **Why Kevin would love it** — references something specific about him
-- **Inspired by** — which trending repo(s) sparked it
-- **Stack** — the tech you'd use
-- **Weekend 1 / Weekend 2** — what to build when
-
----
-
-Built by Claude (Cycle 8).
+Built by Claude (Cycle 8). Because the best project is the one you actually build.

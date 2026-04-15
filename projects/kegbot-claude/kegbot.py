@@ -733,23 +733,19 @@ def cmd_insights(args: list[str]):
 
 # ─── ideas command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+IDEA_FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
 
 
 def cmd_ideas(args: list[str]):
-    """AI-powered weekend project idea generator — delegates to forge.py."""
+    """AI weekend project idea generator — delegates to idea_forge.py."""
     import subprocess
 
-    if not FORGE_SCRIPT.exists():
-        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/forge.py")
+    if not IDEA_FORGE_SCRIPT.exists():
+        print(f"❌ idea_forge.py not found at {IDEA_FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
         sys.exit(1)
 
-    # Default: run `forge ideas`
-    sub = args[0] if args and args[0] in ("ideas", "trending", "help") else "ideas"
-    rest = args[1:] if args and args[0] in ("ideas", "trending", "help") else args
-
-    cmd = [sys.executable, str(FORGE_SCRIPT), sub] + rest
+    cmd = [sys.executable, str(IDEA_FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -798,7 +794,7 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak + repos)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
-  insights repos          Repo-level commit activity + velocity
+  insights repos          Most-committed repos + weekly velocity
   insights summary        Full dashboard view
   insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
@@ -814,6 +810,16 @@ COMMANDS
   forge ideas [--save]    Generate ideas from trending repos (default)
   forge trending          Show trending repos, no AI
   forge saved             Previously saved idea sessions
+
+  ideas                   AI weekend project idea generator
+  ideas forge             3 ideas from trending GitHub repos (default)
+    --days N                Trending window in days (default: 14)
+    --language LANG         Focus on: python, typescript, go
+    --raw                   Show repos only, skip Claude
+  ideas trending          Show trending repos without generating ideas
+  ideas spark             One quick bold idea, no trending analysis
+  ideas save "name"       Save an idea
+  ideas list              List saved ideas
 
   help                    Show this help
 
@@ -833,9 +839,10 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot forge
-    kegbot forge ideas --save
-    kegbot forge trending
+    kegbot ideas
+    kegbot ideas forge --language python
+    kegbot ideas trending
+    kegbot ideas spark
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -852,7 +859,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

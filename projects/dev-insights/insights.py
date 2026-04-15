@@ -263,6 +263,69 @@ def fetch_repo_breakdown(username: str, days: int = 91) -> dict[str, dict]:
     return repos
 
 
+def fetch_push_events_by_repo(username: str, days: int = 90) -> dict[str, dict]:
+    """
+    Fetch PushEvent data grouped by repo, returning:
+      { repo_name: { "total": N, "by_week": {week_start_date: count} } }
+    """
+    cutoff = date.today() - timedelta(days=days)
+    # repo_name -> {total, by_week: {week_start: count}, first_seen, last_seen}
+    repos: dict[str, dict] = defaultdict(lambda: {
+        "total": 0,
+        "by_week": defaultdict(int),
+        "first_seen": None,
+        "last_seen": None,
+    })
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            count = max(num_commits, 1)
+
+            # Week alignment: Monday
+            week_start = event_date - timedelta(days=event_date.weekday())
+
+            r = repos[repo_name]
+            r["total"] += count
+            r["by_week"][week_start] += count
+            if r["first_seen"] is None or event_date < r["first_seen"]:
+                r["first_seen"] = event_date
+            if r["last_seen"] is None or event_date > r["last_seen"]:
+                r["last_seen"] = event_date
+
+        if reached_cutoff:
+            break
+
+    # Freeze defaultdicts
+    return {
+        k: {
+            "total": v["total"],
+            "by_week": dict(v["by_week"]),
+            "first_seen": v["first_seen"],
+            "last_seen": v["last_seen"],
+        }
+        for k, v in repos.items()
+    }
+
+
 def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
 
@@ -585,9 +648,10 @@ def cmd_summary(args: list[str]):
 
 
 def cmd_repos(args: list[str]):
+    """Show which repos got the most commits, with weekly velocity bars."""
     username = get_username(args)
     days = 91
-    weeks = days / 7
+    top_n = 10
 
     print(f"📦 Fetching repo activity for @{username}...")
     repo_data = fetch_push_events_by_repo(username, days=days)
@@ -596,37 +660,54 @@ def cmd_repos(args: list[str]):
         print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
         return
 
-    sorted_repos = sorted(repo_data.items(), key=lambda x: x[1]["total"], reverse=True)
-    today = date.today()
+    # Sort by total commits
+    sorted_repos = sorted(repo_data.items(), key=lambda kv: kv[1]["total"], reverse=True)
+    shown = sorted_repos[:top_n]
+    max_commits = shown[0][1]["total"] if shown else 1
 
-    print(f"\n📦 Repo Activity — @{username} (last ~{days} days)\n")
-    print(f"     {'Repo':<28}  {'Commits':>7}  {'Per week':>8}  {'Last push'}")
-    print(f"     {'─'*28}  {'─'*7}  {'─'*8}  {'─'*10}")
+    print(f"\n📦 Most-committed repos — @{username} (last ~{days} days)\n")
 
-    for repo_name, data in sorted_repos:
-        total = data["total"]
-        velocity = total / weeks
-        last_push = data["last_push"]
-        last_push_str = last_push.strftime("%b %d") if last_push else "?"
-        days_since = (today - last_push).days if last_push else 999
+    bar_width = 20
+    for repo_name, info in shown:
+        total = info["total"]
+        first = info["first_seen"]
+        last = info["last_seen"]
 
-        if days_since <= 3:
-            badge = "🟢"
-        elif days_since <= 14:
-            badge = "🟡"
-        elif days_since <= 45:
-            badge = "🟠"
-        else:
-            badge = "🔴"
+        # Spark bar: proportional to max
+        filled = round((total / max_commits) * bar_width)
+        bar = "█" * filled + "░" * (bar_width - filled)
 
-        # Bar chart: 1 block per 5 commits, max 10 blocks
-        bar_len = min(int(total / 2), 12)
-        bar = "█" * bar_len if bar_len else "▏"
+        # Short repo name (strip owner if it's the default user)
+        short = repo_name.split("/")[-1] if "/" in repo_name else repo_name
+        date_range = ""
+        if first and last and first != last:
+            date_range = f"  {first.strftime('%b %d')} – {last.strftime('%b %d')}"
+        elif first:
+            date_range = f"  {first.strftime('%b %d')}"
 
-        print(f"  {badge}  {repo_name:<28}  {total:>7}  {velocity:>7.1f}/w  {last_push_str}  {bar}")
+        print(f"  {bar}  {total:>3} commits  {short}{date_range}")
 
-    total_commits = sum(d["total"] for d in repo_data.values())
-    print(f"\n     {len(sorted_repos)} repos active · {total_commits} total commits · ~{days} day window")
+    print()
+
+    # Weekly velocity for top repo
+    if shown:
+        top_repo, top_info = shown[0]
+        top_short = top_repo.split("/")[-1] if "/" in top_repo else top_repo
+        by_week = top_info["by_week"]
+        if len(by_week) > 1:
+            print(f"📈 Weekly velocity — {top_short} (top repo)\n")
+            sorted_weeks = sorted(by_week.items())
+            max_wk = max(by_week.values()) or 1
+            for week_start, count in sorted_weeks[-8:]:  # last 8 weeks
+                wk_bar_w = 16
+                filled = round((count / max_wk) * wk_bar_w)
+                wk_bar = "▪" * filled + " " * (wk_bar_w - filled)
+                label = week_start.strftime("%b %d")
+                print(f"  {label}  {wk_bar}  {count}")
+            print()
+
+    total_commits = sum(v["total"] for v in repo_data.values())
+    print(f"  {len(repo_data)} active repo(s) · {total_commits} total commits (last ~{days} days)")
     print()
 
 
@@ -642,7 +723,7 @@ COMMANDS
 
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
-  repos                      Repo-level activity: commits, velocity, freshness
+  repos                      Most-committed repos + weekly velocity
   summary                    Full dashboard: heatmap + streak + stats
   repos                      Per-repo commit breakdown + velocity
 
@@ -660,7 +741,6 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights repos
-    insights repos -u keving3ng
     insights summary -u keving3ng
     insights repos
     insights repos --top 5
@@ -671,7 +751,7 @@ NOTES
   PushEvents = commits pushed to any branch.
   Velocity = commits/week since first push in the period.
 
-Built by Claude (Cycles 7-8). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7–8). Because staring at a green grid is motivating.
 """)
 
 
