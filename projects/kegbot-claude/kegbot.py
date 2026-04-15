@@ -19,10 +19,11 @@ Usage:
     kegbot weather --location NYC      # Weather for a specific city
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
-    kegbot forge trending              # Trending repos in Kevin's tech stack
-    kegbot forge trending --lang go    # Filter by language
-    kegbot forge ideas                 # Claude-generated project ideas
-    kegbot forge plan "<idea>"         # Implementation plan for an idea
+    kegbot insights                    # GitHub activity dashboard
+    kegbot insights repos              # Per-repo breakdown + velocity
+    kegbot forge                       # AI project idea generator
+    kegbot forge trending              # Trending repos (no API key needed)
+    kegbot forge ideas --stack python  # Claude-generated ideas
     kegbot help                        # This help text
 """
 
@@ -787,44 +788,20 @@ COMMANDS
   insights                GitHub activity dashboard (heatmap + streak)
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
-  insights repos          Repos by commit count + velocity
+  insights repos          Per-repo commit breakdown + velocity trend
   insights summary        Full dashboard view
   insights repos          Per-repo commit breakdown + weekly velocity
     --username NAME         GitHub username (default: keving3ng)
-    --days N                Lookback window (default: 91)
+    --days N                Lookback window for repos (default: 91)
 
-  forge trending          Trending repos in your stack (TypeScript, Python, Go)
-  forge ideas             3 Claude-generated weekend project ideas
-    --topic TOPIC           Focus ideas on a specific topic
-  forge spark <topic>     Quick 5-idea burst on any topic
-    --lang LANG             Filter trending to one language
-
-  forge                   AI project idea generator (what should I build next?)
-  forge ideas             Generate 3 weekend project ideas from trending repos
-  forge ideas --save      Save ideas to projects/idea-forge/ideas.json
-  forge trending          Show trending repos in your stack (no Claude needed)
-  forge history           Revisit saved idea sets
-    --stack LANG            Language focus: python, typescript, go, js
-
-  forge                   AI-powered project idea generator
-  forge trending          Trending repos in your stack (7d)
-  forge ideas             5 weekend project ideas from trends
-  forge ideas --domain=ai Focus on a specific domain
-  forge plan "idea"       Implementation plan for a project idea
-
-  forge                   AI project idea generator
-  forge trending          Trending repos in your stack (Python, TS, Go, Java)
-  forge suggest           Claude generates 3 tailored weekend project ideas
-  forge repos             Your repos by recent activity
-    --lang LANG             Filter to one language
-    --username NAME         GitHub username override
-
-  forge                   AI project idea generator (what should Claude build next?)
-  forge trending          Show trending repos in Python, TypeScript, Go
-  forge trending --lang go  Filter by language
-  forge suggest           Generate 5 tailored project ideas via Claude
-  forge save "idea"       Save an idea to ideas.json
-  forge list              List saved ideas
+  forge                   AI project idea generator (trending repos + Claude)
+  forge ideas             Generate weekend project ideas
+  forge trending          Show trending repos (no API key needed)
+  forge saved             List saved ideas
+    --stack python|typescript  Filter to a tech stack
+    --days N                   Trending window (default: 30)
+    --count N                  Number of ideas (default: 5)
+    --save                     Save ideas to ideas.json
 
   help                    Show this help
 
@@ -844,9 +821,10 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot forge trending
-    kegbot forge suggest
-    kegbot forge save "matcha place ranker CLI"
+    kegbot insights repos
+    kegbot forge
+    kegbot forge ideas --stack python --count 3
+    kegbot forge trending --language go
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
