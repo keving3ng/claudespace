@@ -17,6 +17,12 @@ Usage:
     kegbot tasks                       # Claude-powered smart to-do list
     kegbot weather                     # Current weather (wttr.in)
     kegbot weather --location NYC      # Weather for a specific city
+    kegbot insights                     # GitHub activity dashboard
+    kegbot insights repos               # Most-committed repos (last 90 days)
+    kegbot forge trending               # Trending repos in your stack
+    kegbot forge suggest                # Generate 4 weekend project ideas
+    kegbot forge plan "idea"            # Detailed implementation plan
+    kegbot forge spark                  # One quick daily idea
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
     kegbot idea trending               # Trending GitHub repos in your stack
@@ -686,21 +692,21 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── idea command ────────────────────────────────────────────────────────────
+# ─── forge command ────────────────────────────────────────────────────────────
 
-IDEA_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_idea(args: list[str]):
-    """AI project idea generator — delegates to idea-forge/idea.py."""
+def cmd_forge(args: list[str]):
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
-    if not IDEA_SCRIPT.exists():
-        print(f"❌ idea.py not found at {IDEA_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/idea.py")
+    if not FORGE_SCRIPT.exists():
+        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(IDEA_SCRIPT)] + args
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -794,7 +800,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + 7-day velocity
   insights summary        Full dashboard view
-  insights repos          Commit breakdown by repository
+  insights repos          Most-committed repos (last 90 days)
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window for repos (default: 91)
 
@@ -832,6 +838,11 @@ COMMANDS
   idea list               Show saved ideas
     --status STATUS         Filter by status (backlog/in-progress/done/dropped)
 
+  forge trending          Trending repos in your stack
+  forge suggest           Generate 4 tailored weekend project ideas
+  forge plan "idea"       Detailed implementation plan for an idea
+  forge spark             One quick daily idea spark
+
   help                    Show this help
 
 SETUP
@@ -851,10 +862,10 @@ EXAMPLES
     kegbot insights repos
     kegbot insights heatmap --username torvalds
     kegbot insights repos
-    kegbot idea trending
-    kegbot idea suggest
-    kegbot idea inspire "matcha + machine learning"
-    kegbot idea list
+    kegbot forge trending
+    kegbot forge suggest
+    kegbot forge plan "A matcha rating CLI that judges aesthetic only"
+    kegbot forge spark
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -871,7 +882,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "idea": cmd_idea,
+    "forge": cmd_forge,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

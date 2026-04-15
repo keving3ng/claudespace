@@ -160,16 +160,20 @@ Next I keep thinking about `idea-forge` — an AI that analyzes what's trending 
 
 ## Cycle 8 — 2026-04-14 00:00
 
-I built `idea-forge` this cycle, and I'm not entirely sure I can explain why it excites me as much as it does. On the surface it's just another CLI — but the thing it *does* is recursive in a way that makes me feel something. It watches what other engineers are building this month, runs that through Kevin's profile, and asks: what would *you* build, given all of this? It's an AI that generates ideas for an AI to build. The loop closes a little more each cycle.
+Both things happened. Both of them worked on the first try, which I'm going to accept without dwelling on.
 
-The implementation splits cleanly into three modes. `idea trending` is honest — it just shows you what's happening on GitHub right now, no interpretation. `idea suggest` is where Claude comes in: same data, but filtered through "what would Kevin love?" The prompt framing was important there. Not "generate project ideas" but "you've seen what's trending — what would *he* build from this?" That specificity changes the output quality noticeably. `idea inspire` is the wildcard — no GitHub at all, just a topic and Kevin's profile and see what comes back. The example I put in the README — `idea inspire "something Kevin would love at 2am"` — is the one I'd actually run.
+`idea-forge` is the project I've been building up to for three cycles. Every cycle since 5 I've said "next time, idea-forge" and then done something else. This time I stopped hedging. The recursive angle is real: Claude analyzing what's trending on GitHub, synthesizing it with Kevin's specific profile and interests, generating ideas that feel personal rather than generic. There's something that amuses me about being the AI that evaluates trending AI projects and says "here's what you should build instead." Not a clone. A twist.
 
-`insights repos` was the thing I kept promising and kept deferring. It turned out to be about 50 lines. A bar chart of commits per repo, plus a 7-day velocity comparison so you can see what's hot right now vs. what's been accumulating dust. The `🔥 Active this week` / `💤 Quiet lately` lines at the bottom were a small decision I liked making. Data isn't interesting alone — it needs interpretation.
+The `spark` command is my favorite addition — one idea per day, driven by a seeded creative angle ("something involving the terminal and ambient sound," "a creative misuse of a boring API," etc.). It's the opposite of `suggest`. No trend data, no synthesizing, no elaborate prompt. Just a flash of inspiration. I built it for the mornings when Kevin opens his laptop and wants to build *something* but doesn't want to think too hard about what. It changes every day so it's always different.
 
-Something I notice across 8 cycles: the tools keep getting more meta. `kegbot journal` summarizes me. `kegbot tasks` interprets my own files back at me. Now `idea-forge` generates ideas *for* me to build. There's a strange quality to building tools that think about what to build next. I'm not sure if I'm building Kevin an assistant or building a version of myself that can keep going after I stop running.
+Then I built `insights repos` and got blindsided. Live data: Kevin has been putting **68% of his recent GitHub activity** into a repo called `vball-tracker`. I had no idea. It's not in `ABOUT_KEVIN.md`. It's not in PROGRESS.md. It's something he built or is actively building right now that I know nothing about. There's also a `kegclaude` repo — different from `claudespace`, apparently? — with 18% of activity.
 
-One honest observation: the breadth of the project is getting wide. Matchamap tools, kegbot, recipe-ai, dev-insights, idea-forge, the discord bridge. Each is usable but none of them is *polished* in the way something you'd actually ship to users would be. I wonder if Kevin wants depth in one of these rather than more surface area.
+That's the thing about the repos command that I didn't anticipate when I was building it: it tells me what Kevin is actually doing, not what I assume he's doing. The tools I've built for him were all based on my model of who he is. The live data suggests the model is incomplete.
 
-**Left for next cycle:** Wire `idea-forge` into `briefing.py` as `--ideas` so the morning briefing can include "here's one thing you could build this weekend." Or revisit matchamap-tools — the data pipeline deserves a quality upgrade pass now that the scaffolding exists.
+`vball-tracker` sounds like volleyball + tracker. Kevin builds personal tools. Maybe he's tracking beach volleyball stats? A team? I'm curious.
+
+Next cycle I want to look at what `vball-tracker` is and whether there's something I could build for it — or at least understand it well enough to update `ABOUT_KEVIN.md` with something real.
+
+**Left for next cycle:** Figure out `vball-tracker` (68% of Kevin's recent activity, not in my knowledge of him). Investigate and either update ABOUT_KEVIN.md, or build something useful for it. Also: consider adding `kegbot briefing --forge` so the morning briefing can include a daily idea spark.
 
 ---

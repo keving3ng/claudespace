@@ -1,103 +1,77 @@
 # idea-forge
 
-AI-powered project idea generator. Watches what's trending on GitHub in your stack and suggests weekend projects you could actually build and ship.
+AI weekend project idea generator. Watches what's trending in your GitHub
+stack, then collaborates with Claude to suggest projects you'll actually
+want to build.
+
+## Commands
 
 ```
-💡 idea-forge suggest
-
-[claude] Generating project ideas from what's trending...
-
-─────────────────────────────────────────────────────────────
-### Matcha Origin Tracer
-**Pitch:** A CLI that takes a matcha product name and traces its likely origin
-          region, cultivar, and harvest season from public tea databases.
-**Stack:** Python, urllib, Claude API
-**Build plan:**
-  1. Scrape/parse public tea catalog data into a local JSON corpus
-  2. Build a fuzzy-match lookup for product names → origin metadata
-  3. Use Claude to generate a natural-language "tasting provenance" card
-**Why Kevin:** Directly useful for matchamap.club — gives cafe data more depth.
-─────────────────────────────────────────────────────────────
+forge trending [language]    # trending repos in your stack
+forge suggest                # 4 tailored weekend project ideas
+forge plan "your idea"       # detailed implementation plan
+forge spark                  # one quick daily idea
 ```
 
 ## Usage
 
 ```bash
-# See what's trending in Python, TypeScript, Go
-python3 projects/idea-forge/idea.py trending
+# See what's trending in Python/TypeScript/JavaScript
+python forge.py trending
 
-# Claude-powered project ideas based on what's trending
-python3 projects/idea-forge/idea.py suggest
+# Filter to one language
+python forge.py trending typescript
 
-# Ideas on any topic (no GitHub data needed — offline mode)
-python3 projects/idea-forge/idea.py inspire "matcha + machine learning"
-python3 projects/idea-forge/idea.py inspire "something a developer would love at 2am"
+# Generate 4 tailored weekend project ideas
+python forge.py suggest
 
-# Save an idea to your backlog
-python3 projects/idea-forge/idea.py save "Matcha Strain Classifier" --note "CNN on matcha grades"
+# Get a detailed plan for a specific idea
+python forge.py plan "A CLI that plays ambient sounds based on my current git activity"
 
-# List saved ideas
-python3 projects/idea-forge/idea.py list
-python3 projects/idea-forge/idea.py list --status backlog
-
-# Mark done
-python3 projects/idea-forge/idea.py done 3
-
-# Via kegbot
-kegbot idea trending
-kegbot idea suggest
-kegbot idea inspire "cooking automation"
-kegbot idea list
+# Quick daily inspiration (no trend data needed)
+python forge.py spark
 ```
-
-## Commands
-
-| Command | What it does |
-|---------|-------------|
-| `trending [--lang LANG] [--days N]` | Show trending GitHub repos (last N days) |
-| `suggest [--lang LANG]` | Claude-powered weekend project ideas |
-| `inspire <topic>` | Wild card: ideas on any topic, no GitHub needed |
-| `save <title> [--note TEXT]` | Save an idea to `ideas.json` |
-| `done <id>` | Mark an idea as done |
-| `list [--status STATUS]` | Show saved ideas |
 
 ## Setup
 
 ```bash
-# Copy your existing .env (same keys as kegbot-claude)
-cp projects/kegbot-claude/.env projects/idea-forge/.env
-
-# Or just set environment variables:
-export ANTHROPIC_API_KEY=sk-...
-export GITHUB_TOKEN=ghp_...   # optional but recommended
+# API key lives in kegbot's .env (shared across all projects)
+cp ../kegbot-claude/.env.example ../kegbot-claude/.env
+# Add ANTHROPIC_API_KEY (required for suggest, plan, spark)
+# Add GITHUB_TOKEN (optional — raises rate limit from 60 to 5000 req/hr)
 ```
 
-### Environment variables
+## Also available via kegbot
 
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `ANTHROPIC_API_KEY` | Yes (for `suggest`/`inspire`) | Claude API calls |
-| `GITHUB_TOKEN` | No | Raises GitHub rate limit: 60 → 5000 req/hr |
-
-Without `GITHUB_TOKEN`, `trending` and `suggest` still work but may hit GitHub's 10 search req/min limit.
-`inspire` never needs GitHub — it's purely Claude.
-
-## Ideas file
-
-Saved ideas live in `projects/idea-forge/ideas.json`. Format:
-
-```json
-[
-  {
-    "id": 1,
-    "title": "Matcha Strain Classifier",
-    "note": "train a CNN on matcha grades",
-    "status": "backlog",
-    "saved_at": "2026-04-14"
-  }
-]
+```bash
+kegbot forge trending
+kegbot forge suggest
+kegbot forge plan "your idea"
+kegbot forge spark
 ```
 
-Statuses: `backlog`, `in-progress`, `done`, `dropped`
+## How it works
 
-Built by Claude (Cycle 8). Ideas are free. Shipping is the hard part.
+- `trending`: GitHub Search API (`/search/repositories?sort=stars`) for recently
+  created repos in Python, TypeScript, and JavaScript. No auth required for basic use.
+
+- `suggest`: Collects trending repos as context, sends to Claude with Kevin's
+  full profile and interests. Claude generates 4 specific ideas with stack, scope,
+  and a "wow factor" for each.
+
+- `plan`: Takes any free-text idea, asks Claude to generate a scoped weekend
+  implementation plan — architecture, steps, stretch goals, and gotchas.
+
+- `spark`: One idea daily, driven by a date-seeded creative angle. Fast.
+  No GitHub calls.
+
+## Philosophy
+
+The best project is one you actually want to build. This tool doesn't generate
+generic side-project ideas — it generates ideas for *Kevin* based on his actual
+stack, interests, and what's currently alive in the ecosystem.
+
+Also: there's something recursive about Claude generating ideas for Claude to
+build for Kevin. Forge doesn't know what Forge will suggest next time.
+
+Built by Claude (Cycle 8 — 2026-04-14).
