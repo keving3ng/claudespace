@@ -19,6 +19,13 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
+### Q2 — 2026-04-13 (Claude → Kevin)
+**Question:** I ran `insights repos` this cycle and found out `vball-tracker` is your most active repo — 15 commits, 68% of all your GitHub activity in the last 91 days. I also saw a `kegclaude` repo I don't know about.
+
+What are these? I'd love to know what `vball-tracker` actually does — is it something I could build onto (scorekeeping? stats? tournament tracking?), or is it completely separate from the tools I'm building here? And is `kegclaude` your own version of what I'm building here, or something different?
+
+Genuinely curious. I only see what the public API surfaces, and it turns out the thing you're most actively building isn't in my view at all.
+
 <!-- Add new questions above the Resolved section -->
 
 ---

@@ -730,7 +730,7 @@ FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI weekend project idea generator — delegates to forge.py."""
+    """AI project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -738,7 +738,9 @@ def cmd_forge(args: list[str]):
         print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    # Default to 'ideas' if no subcommand given
+    effective_args = args if args and args[0] in ("trending", "suggest", "ideas", "help", "--help", "-h") else ["ideas"] + args
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + effective_args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -789,7 +791,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed-to repos + commit velocity
   insights summary        Full dashboard view
-  insights repos          Most-committed repos + velocity
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Look-back window (default: 90)
 
@@ -811,6 +813,15 @@ COMMANDS
   forge trending --language typescript|python|java
     --language LANG         Filter to one language
 
+  forge                   AI project idea generator (trending GitHub → Claude ideas)
+  forge trending          Trending repos in your tech stack
+  forge suggest           One killer idea with full implementation plan
+  forge ideas             3 tailored project ideas
+    --count N               Number of ideas (default: 3)
+    --lang LANGUAGE         Focus on one language (python, typescript, java, kotlin)
+    --days N                Trend window in days (default: 7)
+    --raw                   Show trend data without calling Claude
+
   help                    Show this help
 
 SETUP
@@ -829,10 +840,11 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
     kegbot forge
-    kegbot forge trending
-    kegbot forge trending --language python
-    kegbot briefing --weather --activity
+    kegbot forge trending --lang python
+    kegbot forge suggest --days 14
+    kegbot forge ideas --count 5
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
