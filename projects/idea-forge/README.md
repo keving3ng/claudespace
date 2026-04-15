@@ -1,61 +1,70 @@
 # idea-forge
 
-AI-powered project idea generator tailored to Kevin's profile.
+> The meta-project. Claude suggesting what Claude should build next.
 
-Watches what's trending on GitHub, filters by your tech stack, and asks Claude
-to suggest weekend projects you'd actually want to build. Also works offline
-with a curated seed library.
+An AI-powered weekend project idea generator. Scans trending GitHub repos in Kevin's tech stack, then uses Claude to generate 3 personalized project ideas with rough implementation plans.
 
-## Commands
+Zero external dependencies. Pure stdlib + Anthropic API.
 
+---
+
+## Usage
+
+```bash
+# Generate 3 project ideas (requires ANTHROPIC_API_KEY)
+python forge.py ideas
+
+# Show trending repos in Kevin's stack (no API key needed)
+python forge.py trending
+
+# Filter trending to a specific language
+python forge.py trending --lang python
+python forge.py trending --lang typescript
+
+# See which repos Claude used for inspiration
+python forge.py ideas --verbose
+
+# Post ideas to Discord
+python forge.py ideas --discord
 ```
-forge spark                         # 3 offline micro-ideas, no API key needed
-forge trending                      # What's gaining stars on GitHub right now
-forge trending --lang typescript    # Filter to a language
-forge trending --days 7             # Shorter lookback window (default: 14 days)
-forge ideas                         # Claude-powered ideas from trending repos
-forge ideas --topic "cli tools"     # Focus on a topic
-forge ideas --lang python           # Constrain to a language
-forge plan "a markdown wiki CLI"    # Full implementation roadmap for an idea
-forge help
+
+Via kegbot:
+```bash
+kegbot ideas
+kegbot ideas trending
+kegbot ideas trending --lang go
 ```
 
-## Via kegbot
+---
 
-```
-kegbot forge spark
-kegbot forge trending --lang python
-kegbot forge ideas --topic "discord bots"
-kegbot forge plan "a terminal finance tracker"
-```
+## How it works
+
+1. **Fetch trending repos** via GitHub Search API — repos created in the last 30 days with >50 stars, sorted by stars, across Python / TypeScript / JavaScript / Go
+2. **Build a context prompt** with Kevin's profile (stack, projects, interests) + the trending data
+3. **Ask Claude Opus** to suggest 3 ideas that are: inspired by (not copies of) the trending repos, buildable in a weekend, connected to something Kevin actually cares about
+
+---
 
 ## Setup
 
-No API key required for `trending` and `spark`.
+Add `ANTHROPIC_API_KEY` to `projects/kegbot-claude/.env`:
 
-For `ideas` and `plan` (Claude-powered), add your key:
 ```
-# projects/kegbot-claude/.env
 ANTHROPIC_API_KEY=sk-ant-...
+GITHUB_TOKEN=ghp_...   # optional but recommended (higher rate limits)
 ```
 
-Optional: add `GITHUB_TOKEN` for 5000 req/hr (vs 60 unauthenticated):
-```
-GITHUB_TOKEN=ghp_...
-```
+---
 
-## What `forge spark` generates
+## Output format
 
-Seeds from a curated library of 26 micro-ideas across:
-`cli`, `maps`, `discord`, `cooking`, `devtools`, `ml`, `games`, `finance`, `misc`
+Each idea includes:
+- **What it is** — one concrete sentence
+- **Why Kevin would love it** — references something specific about him
+- **Inspired by** — which trending repo(s) sparked it
+- **Stack** — the tech you'd use
+- **Weekend 1 / Weekend 2** — what to build when
 
-Seeded by today's date — you get the same 3 ideas all day, different tomorrow.
+---
 
-## Notes
-
-- `trending` uses the GitHub Search API (recently-created repos by star growth)
-- `ideas` fetches trending data then asks Claude to synthesize project ideas
-- `plan` generates a full milestone breakdown + file structure + first-30-min guide
-- Zero pip installs — stdlib only (`urllib`, `json`, `random`)
-
-Built by Claude (Cycle 8). The meta-project: Claude suggesting what Claude should build next.
+Built by Claude (Cycle 8).

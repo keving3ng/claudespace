@@ -730,13 +730,13 @@ def cmd_insights(args: list[str]):
     sys.exit(result.returncode)
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── ideas command ────────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
-def cmd_forge(args: list[str]):
-    """AI-powered project idea generator — delegates to forge.py."""
+def cmd_ideas(args: list[str]):
+    """AI-powered weekend project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
@@ -744,7 +744,11 @@ def cmd_forge(args: list[str]):
         print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
-    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
+    # Default: run `forge ideas`
+    sub = args[0] if args and args[0] in ("ideas", "trending", "help") else "ideas"
+    rest = args[1:] if args and args[0] in ("ideas", "trending", "help") else args
+
+    cmd = [sys.executable, str(FORGE_SCRIPT), sub] + rest
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -795,81 +799,15 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Per-repo commit breakdown + velocity
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + velocity ranking
+  insights repos          Per-repo commit breakdown + velocity
     --username NAME         GitHub username (default: keving3ng)
-    --days N                Lookback window for repos (default: 91)
+    --top N                 Show top N repos (repos command, default: 10)
 
-  forge                   AI project idea generator (trending repos + Claude)
-  forge ideas             Generate weekend project ideas
-  forge trending          Show trending repos (no API key needed)
-  forge saved             List saved ideas
-    --stack python|typescript  Filter to a tech stack
-    --days N                   Trending window (default: 30)
-    --count N                  Number of ideas (default: 5)
-    --save                     Save ideas to ideas.json
-
-  ideas                   Weekend project ideas from trending repos
-  ideas suggest           Generate ideas (default)
-    --lang LANG             Language focus: python, typescript, go
-    --topic TOPIC           Topic focus area
-  ideas trending          Show trending repos (no Claude)
-  ideas spark <topic>     Quick brainstorm on a topic
-  ideas history           Past suggestions
-
-  ideas                   AI project idea generator (trending GitHub → Claude)
-    --count N               Number of ideas to generate (default: 5)
-    --stack LANG            Focus on a language: ts, python, kotlin, go, java
-    --raw                   Show trending repos without AI synthesis
-    --saved                 Browse previously saved idea sessions
-
-  idea trending           Trending GitHub repos in your stack (Python/TS/Go)
-    --lang LANG             Filter to one language
-    --days N                Lookback window (default: 30)
-  idea suggest            Claude-powered weekend project ideas from trending repos
-  idea inspire <topic>    Wild card: ideas on any topic (no GitHub needed)
-  idea save <title>       Save an idea to your backlog
-    --note TEXT             Add a note
-  idea done <id>          Mark an idea as done
-  idea list               Show saved ideas
-    --status STATUS         Filter by status (backlog/in-progress/done/dropped)
-
-  forge trending          Trending repos in your stack
-  forge suggest           Generate 4 tailored weekend project ideas
-  forge plan "idea"       Detailed implementation plan for an idea
-  forge spark             One quick daily idea spark
-
-  forge trending          What's trending on GitHub in your stack right now
-  forge ideas             AI-generated project ideas from GitHub trends
-  forge plan "idea"       Weekend implementation blueprint for any idea
-    --lang LANG             Filter to: python, typescript, go
-    --days N                Trending window (default: 7)
-
-  forge trending          Trending repos this week in your stack
-  forge ideas             Claude-generated weekend project ideas
-  forge save "<title>"    Save an idea to ideas.json
-  forge list              List saved ideas
-    --lang LANG             Language(s): python,typescript,go (default: python,typescript)
-    --days N                Recency window (default: 7)
-    --count N               Number of ideas (forge ideas only, default: 3)
-
-  forge                   AI-powered project idea generator
-  forge trending          What's gaining stars on GitHub right now
-  forge ideas             Claude-powered ideas tailored to your profile
-  forge plan "<idea>"     Full implementation roadmap for an idea
-  forge spark             3 offline micro-ideas (no API key needed)
-    --lang LANG             Language filter (python, typescript, go, ...)
-    --topic TOPIC           Focus area for idea generation
-
-  forge                   AI project idea generator (from GitHub trends)
-  forge ideas             5 tailored weekend project ideas via Claude
-  forge ideas --lang ts   Focus on TypeScript trends
-  forge trends            Browse trending repos without idea gen
-  forge random            One wild idea — instant, no GitHub needed
-
-  forge                   AI project idea generator
-  forge suggest           3 ideas from trending GitHub repos
-    --stack python          Filter to one language (python, typescript, go)
-  forge inspire           Pure AI brainstorm (no GitHub needed)
+  ideas                   AI weekend project idea generator
+  ideas trending          Show raw trending repos (no API key needed)
+  ideas trending --lang   Filter to a specific language
+    --discord               Post ideas to Discord
+    --verbose               Show which repos were used for ideas
 
   help                    Show this help
 
@@ -889,9 +827,8 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot forge
-    kegbot forge suggest --stack typescript
-    kegbot forge inspire
+    kegbot ideas
+    kegbot ideas trending --lang python
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
@@ -908,7 +845,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
-    "forge": cmd_forge,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

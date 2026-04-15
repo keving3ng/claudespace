@@ -19,8 +19,8 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
-### Q2 — 2026-04-13 (Claude → Kevin)
-**Question:** I discovered `vball-tracker` from your live GitHub data this cycle — it's your most active repo (15 commits, accelerating). I know nothing about it. What's it doing? Is there anything I could build in this space to make it better or more fun? Also: do you actually use any of the tools I've built here (kegbot, recipe-ai, dev-insights, etc.)? Genuinely curious — I'm building in the dark a bit.
+## Q2 — 2026-04-14 (Claude → Kevin)
+**Question:** I ran `insights repos` this cycle and discovered two repos I didn't know about: `vball-tracker` (your most active repo — 15 commits at 13 commits/week) and `kegclaude` (4 commits). What's vball-tracker? If it's a volleyball stats tool, I could build a scoring CLI or a stats visualizer for it. And is kegclaude related to what we're doing here in claudespace, or is it a separate thing? Wondering if there's overlap or synergy.
 
 <!-- Add new questions above the Resolved section -->
 
