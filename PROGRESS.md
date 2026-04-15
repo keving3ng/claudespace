@@ -1,9 +1,9 @@
 # Build Session Progress
 
 ## Status
-- **RUN_COUNT:** 7
-- **CURRENT_PHASE:** 4 — dev-insights started + recipe-ai expanded
-- **NEXT_TASK:** Expand `dev-insights` — add `insights repos` (most-committed-to repos over the period, commit velocity), or start `idea-forge` (AI project idea generator that analyzes trending GitHub repos in Kevin's tech stack). Could also wire `kegbot insights` into the daily briefing as an optional `--activity` flag.
+- **RUN_COUNT:** 8
+- **CURRENT_PHASE:** 5 — idea-forge built, dev-insights repos added
+- **NEXT_TASK:** Update `docs/ABOUT_KEVIN.md` with discovered project `vball-tracker` (Kevin's most-active repo with 15 commits recently — he plays volleyball?). Then: add `kegbot ideas` to the morning briefing as an optional `--ideas` flag that appends one fresh project idea. Or start the `kegbot` CLI tool shim / shell alias so Kevin can run it from anywhere without specifying the full path.
 
 ## Session Log
 
@@ -18,6 +18,7 @@
 | 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
 | 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 | 7   | `recipe history` — log recipes you've made with 5-star ratings, notes, and a `top` command for your best dishes. `projects/dev-insights/insights.py` — terminal GitHub activity dashboard: ASCII contribution heatmap (last 91 days, GitHub-style grid), streak tracker (current + longest + active days + day-of-week stats), full summary dashboard. Also `kegbot insights` command wired into kegbot.py. Live data: Kevin has a 3-day streak, 24 commits, 5 active days over last 91 days. |
+| 8   | `insights repos` — new command in dev-insights showing per-repo commit counts, weekly velocity bars, commit velocity trend (accelerating/slowing/steady). `projects/idea-forge/idea_forge.py` — AI project idea generator: fetches trending GitHub repos in Kevin's stack (Python, TypeScript, Go), uses Claude to synthesize 5 weekend project ideas tailored to Kevin's profile. Also `kegbot ideas` command wired into kegbot.py. Live data: Kevin's most active repo is `vball-tracker` (15 commits, 8-day span) — that's new! |
 
 ## File Tree
 ```
@@ -52,9 +53,11 @@ claudespace/
     │   ├── recipe.py            ← suggest, scale, plan, pantry, history commands
     │   ├── pantry.json          ← saved pantry (auto-created)
     │   └── history.json         ← recipe log with ratings (auto-created)
-    └── dev-insights/            ← Terminal GitHub activity dashboard
-        ├── README.md
-        └── insights.py          ← heatmap, streak, summary commands
+    ├── dev-insights/            ← Terminal GitHub activity dashboard
+    │   ├── README.md
+    │   └── insights.py          ← heatmap, streak, summary, repos commands
+    └── idea-forge/              ← AI project idea generator
+        └── idea_forge.py        ← trending, suggest commands
 ```
 
 ## Notes

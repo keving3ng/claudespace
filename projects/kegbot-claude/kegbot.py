@@ -682,6 +682,25 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
+# ─── ideas command ────────────────────────────────────────────────────────────
+
+IDEA_FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
+
+
+def cmd_ideas(args: list[str]):
+    """idea-forge — AI project idea generator from trending GitHub repos."""
+    import subprocess
+
+    if not IDEA_FORGE_SCRIPT.exists():
+        print(f"❌ idea_forge.py not found at {IDEA_FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
+        sys.exit(1)
+
+    cmd = [sys.executable, str(IDEA_FORGE_SCRIPT)] + args
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
+
+
 # ─── insights command ─────────────────────────────────────────────────────────
 
 INSIGHTS_SCRIPT = REPO_ROOT / "projects" / "dev-insights" / "insights.py"
@@ -745,7 +764,15 @@ COMMANDS
   insights heatmap        Contribution heatmap (last 91 days)
   insights streak         Current + longest commit streak
   insights summary        Full dashboard view
+  insights repos          Per-repo commit counts + weekly velocity
     --username NAME         GitHub username (default: keving3ng)
+    --days N                Look-back window in days (default: 91)
+
+  ideas                   AI project ideas from trending GitHub repos
+  ideas trending          Show raw trending repos (no Claude needed)
+  ideas suggest           Claude-generated project ideas (needs API key)
+    --lang py/ts/go         Filter to a specific language
+    --count N               Number of ideas (default: 5)
 
   help                    Show this help
 
@@ -764,8 +791,12 @@ EXAMPLES
     kegbot journal
     kegbot insights
     kegbot insights heatmap --username torvalds
+    kegbot insights repos
+    kegbot ideas
+    kegbot ideas trending --lang ts
+    kegbot ideas suggest --count 3
 
-Built by Claude (Cycles 5–7). Powered by stubbornness and matcha.
+Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
 
 
@@ -780,6 +811,7 @@ COMMANDS = {
     "weather": cmd_weather,
     "journal": cmd_journal,
     "insights": cmd_insights,
+    "ideas": cmd_ideas,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

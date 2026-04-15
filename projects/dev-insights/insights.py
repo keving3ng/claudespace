@@ -2,7 +2,7 @@
 """
 insights — Terminal GitHub activity dashboard
 
-Contribution heatmap, coding streak tracker, commit stats.
+Contribution heatmap, coding streak tracker, commit stats, repo breakdown.
 Zero dependencies beyond stdlib. Uses GitHub public API (no auth, 60 req/hr).
 
 Usage:
@@ -12,6 +12,9 @@ Usage:
     insights streak --username foo
     insights summary                       # full dashboard (heatmap + streak + stats)
     insights summary --username foo
+    insights repos                         # most-committed-to repos + velocity
+    insights repos --username foo
+    insights repos --days 30              # shorter window
     insights help
 """
 
@@ -122,6 +125,50 @@ def fetch_push_events(username: str, days: int = 90) -> dict[date, int]:
 
 def fetch_user_info(username: str) -> dict | None:
     return _github_request(f"https://api.github.com/users/{username}")
+
+
+def fetch_events_by_repo(username: str, days: int = 91) -> dict:
+    """
+    Fetch PushEvent data, returning per-repo stats:
+      {
+        "commits": { "owner/repo": N, ... },
+        "dates":   { "owner/repo": [date, ...], ... },
+      }
+    """
+    cutoff = date.today() - timedelta(days=days)
+    repo_commits: dict[str, int] = defaultdict(int)
+    repo_dates: dict[str, list[date]] = defaultdict(list)
+
+    for page in range(1, 4):
+        url = f"https://api.github.com/users/{username}/events?per_page=100&page={page}"
+        events = _github_request(url)
+        if not events or not isinstance(events, list):
+            break
+
+        reached_cutoff = False
+        for event in events:
+            if event.get("type") != "PushEvent":
+                continue
+            created_at = event.get("created_at", "")
+            try:
+                event_date = datetime.strptime(created_at[:10], "%Y-%m-%d").date()
+            except ValueError:
+                continue
+            if event_date < cutoff:
+                reached_cutoff = True
+                continue
+            repo_name = event.get("repo", {}).get("name", "unknown")
+            num_commits = len(event.get("payload", {}).get("commits", []))
+            repo_commits[repo_name] += max(num_commits, 1)
+            repo_dates[repo_name].append(event_date)
+
+        if reached_cutoff:
+            break
+
+    return {
+        "commits": dict(repo_commits),
+        "dates": {k: sorted(v) for k, v in repo_dates.items()},
+    }
 
 
 # ─── Heat level ───────────────────────────────────────────────────────────────
@@ -390,6 +437,82 @@ def cmd_summary(args: list[str]):
     print()
 
 
+def _get_days(args: list[str], default: int = 91) -> int:
+    for flag in ("--days", "-d"):
+        if flag in args:
+            idx = args.index(flag)
+            if idx + 1 < len(args):
+                try:
+                    return int(args[idx + 1])
+                except ValueError:
+                    pass
+    return default
+
+
+def cmd_repos(args: list[str]):
+    username = get_username(args)
+    days = _get_days(args, default=91)
+
+    print(f"🗂  Fetching repo activity for @{username} (last {days} days)...")
+    data = fetch_events_by_repo(username, days=days)
+    repo_commits = data["commits"]
+    repo_dates = data["dates"]
+
+    if not repo_commits:
+        print(f"\n⚠️  No push events found for @{username} in the last {days} days.")
+        return
+
+    # Sort by commit count descending
+    ranked = sorted(repo_commits.items(), key=lambda x: x[1], reverse=True)
+    max_commits = ranked[0][1] if ranked else 1
+    bar_width = 24  # max bar width in chars
+    weeks = max(days / 7, 1)
+
+    print(f"\n🗂  Most Active Repos — @{username}  (last ~{days} days)\n")
+    header = f"  {'Rank':<5} {'Repository':<35} {'Commits':>7}   {'Weekly avg':>10}   Bar"
+    print(header)
+    print("  " + "─" * (len(header) - 2))
+
+    for rank, (repo, count) in enumerate(ranked, start=1):
+        bar_len = max(1, round((count / max_commits) * bar_width))
+        bar = "█" * bar_len
+        velocity = count / weeks
+        date_list = repo_dates.get(repo, [])
+        span = ""
+        if date_list:
+            first, last = date_list[0], date_list[-1]
+            span_days = (last - first).days + 1
+            if span_days > 1:
+                span = f" ({span_days}d span)"
+        print(
+            f"  {rank:<5} {repo:<35} {count:>7}   {velocity:>8.1f}/wk   {bar}{span}"
+        )
+
+    total = sum(repo_commits.values())
+    print(f"\n  Total: {total} commits across {len(ranked)} repo(s)")
+
+    # Week-over-week velocity for the top repo
+    if ranked:
+        top_repo, _ = ranked[0]
+        top_dates = repo_dates.get(top_repo, [])
+        if top_dates and days >= 14:
+            today = date.today()
+            last_week_commits = sum(
+                1 for d in top_dates if (today - d).days <= 7
+            )
+            prior_week_commits = sum(
+                1 for d in top_dates if 7 < (today - d).days <= 14
+            )
+            if last_week_commits > prior_week_commits:
+                trend = "↑ accelerating"
+            elif last_week_commits < prior_week_commits:
+                trend = "↓ slowing"
+            else:
+                trend = "→ steady"
+            print(f"\n  {top_repo}: {last_week_commits} commits last 7d vs {prior_week_commits} prior 7d — {trend}")
+    print()
+
+
 def cmd_help():
     print("""
 📈 insights — Terminal GitHub activity dashboard
@@ -403,10 +526,12 @@ COMMANDS
   heatmap                    GitHub-style contribution heatmap (last 91 days)
   streak                     Current + longest commit streak
   summary                    Full dashboard: heatmap + streak + stats
+  repos                      Per-repo commit counts + weekly velocity
 
 OPTIONS
   --username <user>          GitHub username (default: keving3ng)
   -u <user>                  Shorthand for --username
+  --days <N>                 Look-back window in days (default: 91)
 
 SETUP
   No API key required. Optionally add GITHUB_TOKEN to .env for higher
@@ -417,13 +542,15 @@ EXAMPLES
     insights heatmap --username torvalds
     insights streak
     insights summary -u keving3ng
+    insights repos
+    insights repos --days 30
 
 NOTES
   GitHub Events API returns up to 300 recent events (last ~90 days).
   Private repo activity only visible if GITHUB_TOKEN is set.
   PushEvents = commits pushed to any branch.
 
-Built by Claude (Cycle 7). Because staring at a green grid is motivating.
+Built by Claude (Cycles 7-8). Because knowing which repo is on fire matters.
 """)
 
 
@@ -433,6 +560,7 @@ COMMANDS = {
     "heatmap": cmd_heatmap,
     "streak": cmd_streak,
     "summary": cmd_summary,
+    "repos": cmd_repos,
     "help": lambda _: cmd_help(),
     "--help": lambda _: cmd_help(),
     "-h": lambda _: cmd_help(),

@@ -19,7 +19,9 @@
 
 | Repo | Description | Last pushed | Essence |
 |------|-------------|-------------|---------|
-| **claudespace** | claude be workin | 2026-03 | This space — autonomous build lab |
+| **vball-tracker** | — | 2026-04 | ⭐ Currently most-active repo (15 commits, 8-day span). Volleyball tracker of some kind. New discovery — not much known yet. |
+| **kegclaude** | — | 2026-04 | Kevin's own Claude-powered personal assistant (parallel to claudespace's kegbot-claude). 4 commits recently. |
+| **claudespace** | claude be workin | 2026-04 | This space — autonomous build lab |
 | **matchamap** | the matchamap (private) | 2026-03 | Map-based matcha cafe finder → matchamap.club; actively building |
 | **kgeng.dev** | kgeng.dev | 2026-03 | Personal site |
 | **kegbot** | personal assistant? | 2026-02 | Python personal assistant; daily briefings, automation, “supercharge with Claude” candidate |
