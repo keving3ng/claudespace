@@ -1,77 +1,61 @@
 # idea-forge
 
-AI-powered weekend project idea generator. Watches trending GitHub repos in Kevin's tech stack, then asks Claude to dream up weekend projects tailored to his interests. Save the ones that stick.
+AI-powered project idea generator tailored to Kevin's profile.
 
-## What it does
+Watches what's trending on GitHub, filters by your tech stack, and asks Claude
+to suggest weekend projects you'd actually want to build. Also works offline
+with a curated seed library.
 
-1. **Scans trending repos** — GitHub Search API, filtered by language (Python, TypeScript, Go, etc.), sorted by new stars this week
-2. **Asks Claude to ideate** — takes the trending repos + Kevin's profile and generates project ideas he'd actually build, connected to his interests
-3. **Saves ideas locally** — `ideas.json` in this directory, survives between sessions
+## Commands
 
-## Usage
-
-```bash
-# See what's trending in your stack this week
-python forge.py trending
-
-# Trending in a specific language
-python forge.py trending --lang go
-
-# Multiple languages
-python forge.py trending --lang python,typescript,rust
-
-# Get Claude-generated project ideas (requires ANTHROPIC_API_KEY)
-python forge.py ideas
-
-# Constrain to one language, get 5 ideas
-python forge.py ideas --lang typescript --count 5
-
-# Save an idea
-python forge.py save "Terminal-based Git graph visualizer in Python"
-
-# View saved ideas
-python forge.py list
-
-# Clear ideas list
-python forge.py clear
+```
+forge spark                         # 3 offline micro-ideas, no API key needed
+forge trending                      # What's gaining stars on GitHub right now
+forge trending --lang typescript    # Filter to a language
+forge trending --days 7             # Shorter lookback window (default: 14 days)
+forge ideas                         # Claude-powered ideas from trending repos
+forge ideas --topic "cli tools"     # Focus on a topic
+forge ideas --lang python           # Constrain to a language
+forge plan "a markdown wiki CLI"    # Full implementation roadmap for an idea
+forge help
 ```
 
-Or through `kegbot`:
-```bash
-kegbot forge trending
-kegbot forge ideas
-kegbot forge list
+## Via kegbot
+
+```
+kegbot forge spark
+kegbot forge trending --lang python
+kegbot forge ideas --topic "discord bots"
+kegbot forge plan "a terminal finance tracker"
 ```
 
 ## Setup
 
-**No API key needed** for `forge trending` — uses GitHub's public search API (60 req/hr without auth).
+No API key required for `trending` and `spark`.
 
-**For `forge ideas`** — add your Anthropic API key:
-```bash
-# Uses the same .env as kegbot-claude (already configured? You're good.)
-echo "ANTHROPIC_API_KEY=your-key-here" >> projects/kegbot-claude/.env
+For `ideas` and `plan` (Claude-powered), add your key:
+```
+# projects/kegbot-claude/.env
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-**To raise GitHub rate limits** (60 → 5000 req/hr):
-```bash
-echo "GITHUB_TOKEN=your-token-here" >> projects/kegbot-claude/.env
+Optional: add `GITHUB_TOKEN` for 5000 req/hr (vs 60 unauthenticated):
+```
+GITHUB_TOKEN=ghp_...
 ```
 
-## Options
+## What `forge spark` generates
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--lang` | `python,typescript` | Language(s) to filter trending repos |
-| `--days` | `7` | Recency window for "new" repos |
-| `--count` | `3` | Number of ideas to generate |
+Seeds from a curated library of 26 micro-ideas across:
+`cli`, `maps`, `discord`, `cooking`, `devtools`, `ml`, `games`, `finance`, `misc`
 
-## Philosophy
+Seeded by today's date — you get the same 3 ideas all day, different tomorrow.
 
-The best project ideas aren't random — they come from watching what other people are building and asking "what would *I* actually use?" That's the loop forge closes. It's not generating ideas from nowhere; it's pattern-matching against real engineering momentum and filtering through Kevin's specific interests.
+## Notes
 
-The `ideas.json` file is your capture net. Run it weekly, save what resonates, ignore what doesn't.
+- `trending` uses the GitHub Search API (recently-created repos by star growth)
+- `ideas` fetches trending data then asks Claude to synthesize project ideas
+- `plan` generates a full milestone breakdown + file structure + first-30-min guide
+- Zero pip installs — stdlib only (`urllib`, `json`, `random`)
 
----
-
-*Built by Claude (Cycle 8). Zero pip installs. Pure stdlib + Claude API.*
+Built by Claude (Cycle 8). The meta-project: Claude suggesting what Claude should build next.

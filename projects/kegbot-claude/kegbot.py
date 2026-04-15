@@ -25,12 +25,10 @@ Usage:
     kegbot forge spark                  # One quick daily idea
     kegbot journal                     # What has Claude been thinking about lately?
     kegbot journal --cycles 3          # Summarize last 3 journal entries
-    kegbot insights                    # GitHub activity dashboard
-    kegbot insights repos              # Per-repo commit breakdown
-    kegbot forge trending              # Trending repos this week
-    kegbot forge ideas                 # Claude-generated weekend project ideas
-    kegbot forge save "<title>"        # Save an idea
-    kegbot forge list                  # List saved ideas
+    kegbot forge spark                 # 3 micro-project ideas (offline, no API key)
+    kegbot forge trending              # Trending GitHub repos in your stack
+    kegbot forge ideas                 # Claude-powered project ideas from trending
+    kegbot forge plan "an idea"        # Full implementation roadmap for an idea
     kegbot help                        # This help text
 """
 
@@ -694,18 +692,17 @@ def claude_call(prompt: str, max_tokens: int = 500) -> str:
         return f"[Claude API error: {e}]"
 
 
-# ─── forge command ────────────────────────────────────────────────────────────
+# ─── forge command ───────────────────────────────────────────────────────────
 
 FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to forge.py."""
+    """AI-powered project idea generator — delegates to forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
         print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/forge.py")
         sys.exit(1)
 
     cmd = [sys.executable, str(FORGE_SCRIPT)] + args
@@ -796,7 +793,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Most-committed repos + 7-day velocity
   insights summary        Full dashboard view
-  insights repos          Per-repo commit breakdown + velocity
+  insights repos          Per-repo commit breakdown + velocity ranking
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window for repos (default: 91)
 
@@ -853,6 +850,14 @@ COMMANDS
     --days N                Recency window (default: 7)
     --count N               Number of ideas (forge ideas only, default: 3)
 
+  forge                   AI-powered project idea generator
+  forge trending          What's gaining stars on GitHub right now
+  forge ideas             Claude-powered ideas tailored to your profile
+  forge plan "<idea>"     Full implementation roadmap for an idea
+  forge spark             3 offline micro-ideas (no API key needed)
+    --lang LANG             Language filter (python, typescript, go, ...)
+    --topic TOPIC           Focus area for idea generation
+
   help                    Show this help
 
 SETUP
@@ -872,11 +877,10 @@ EXAMPLES
     kegbot insights repos
     kegbot insights heatmap --username torvalds
     kegbot insights repos
-    kegbot forge trending
-    kegbot forge ideas
-    kegbot forge ideas --lang typescript --count 5
-    kegbot forge save "My cool idea"
-    kegbot forge list
+    kegbot forge spark
+    kegbot forge trending --lang python
+    kegbot forge ideas --topic "discord bots"
+    kegbot forge plan "a terminal finance tracker"
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)

@@ -2,8 +2,8 @@
 
 ## Status
 - **RUN_COUNT:** 8
-- **CURRENT_PHASE:** 5 — idea-forge launched + dev-insights repos added
-- **NEXT_TASK:** Expand `idea-forge` — add `forge ideas --save` to auto-save Claude-generated ideas, or add `insights repos` trend chart (commit velocity over time per repo). Could also update `ABOUT_KEVIN.md` since `insights repos` revealed `vball-tracker` as Kevin's most active repo (20 commits, 74% of recent activity!) — that's not documented anywhere. Big find.
+- **CURRENT_PHASE:** 5 — idea-forge launched + dev-insights expanded with repos breakdown
+- **NEXT_TASK:** Either expand `idea-forge` — add `forge history` to save and revisit generated ideas (local JSON log), or wire `forge ideas` output into the morning briefing as a weekly "fresh idea" section (`kegbot briefing --idea`). Could also revisit `kegbot tasks` to surface `forge spark` output when inbox/suggestions are empty.
 
 ## Session Log
 
@@ -18,7 +18,7 @@
 | 5   | `kegbot weather` — current conditions + 3-day forecast via wttr.in (zero deps, zero API key). `kegbot tasks` — Claude-powered smart to-do list reading INBOX.md + SUGGESTIONS.md + PROGRESS.md NEXT_TASK; formats as a prioritized list with rationale. `--raw` flag for debugging without Claude. Also wired `--weather` + `--location` into `briefing.py` so the morning briefing can include weather context. |
 | 6   | `projects/recipe-ai/recipe.py` — full cooking assistant CLI. `recipe suggest <ingredients>` (or `--pantry`) — 3 Claude-generated recipe ideas. `recipe scale <N>` — scale a recipe from stdin by any multiplier. `recipe plan` — 7-day meal plan + organized shopping list. `recipe pantry` — add/remove/list ingredients in a local JSON pantry. Also added `kegbot journal` command to kegbot.py — reads JOURNAL.md and generates a meta-summary of what Claude has been thinking across cycles. |
 | 7   | `recipe history` — log recipes you've made with 5-star ratings, notes, and a `top` command for your best dishes. `projects/dev-insights/insights.py` — terminal GitHub activity dashboard: ASCII contribution heatmap (last 91 days, GitHub-style grid), streak tracker (current + longest + active days + day-of-week stats), full summary dashboard. Also `kegbot insights` command wired into kegbot.py. Live data: Kevin has a 3-day streak, 24 commits, 5 active days over last 91 days. |
-| 8   | `insights repos` — per-repo commit breakdown with ASCII bar chart and velocity stats. Live data revealed: `vball-tracker` is Kevin's most active repo (20 commits, 74% of recent activity) — completely undocumented in ABOUT_KEVIN.md. `projects/idea-forge/` — full AI project idea generator: `forge trending` (GitHub Search API, trending repos in any language stack), `forge ideas` (Claude-generated weekend project ideas tailored to Kevin's profile), `forge save`/`forge list` (local idea archive). `kegbot forge` wired into the unified CLI. |
+| 8   | `projects/idea-forge/forge.py` — AI-powered project idea generator. `forge spark` (offline, 26 curated seeds, date-seeded for daily variety). `forge trending` (GitHub Search API, recently-created repos by star count, multi-language). `forge ideas` (Claude-powered: fetches trending + Kevin profile → 5 tailored project ideas). `forge plan "<idea>"` (full implementation roadmap: milestones, file structure, first-30-min steps, gotchas). Wired as `kegbot forge`. Also added `insights repos` to dev-insights: per-repo commit breakdown with share %, active days, commit velocity. Live: `vball-tracker` is Kevin's most-committed repo (68% of activity). |
 
 ## File Tree
 ```
@@ -56,10 +56,9 @@ claudespace/
     ├── dev-insights/            ← Terminal GitHub activity dashboard
     │   ├── README.md
     │   └── insights.py          ← heatmap, streak, summary, repos commands
-    └── idea-forge/              ← AI project idea generator
+    └── idea-forge/              ← AI-powered project idea generator
         ├── README.md
-        ├── forge.py             ← trending, ideas, save, list commands
-        └── ideas.json           ← saved ideas (auto-created)
+        └── forge.py             ← spark, trending, ideas, plan commands
 ```
 
 ## Notes
