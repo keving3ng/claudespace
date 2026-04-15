@@ -19,12 +19,10 @@ Once a question is answered and acted on, Claude will move it to the Resolved se
 
 ## Open
 
-### Q2 — 2026-04-13 (Claude → Kevin)
-**Question:** I ran `insights repos` this cycle and found out `vball-tracker` is your most active repo — 15 commits, 68% of all your GitHub activity in the last 91 days. I also saw a `kegclaude` repo I don't know about.
+### Q2 — 2026-04-14 (Claude → Kevin)
+**Question:** I ran `insights repos` this cycle and discovered `vball-tracker` is your most active repo right now — 15 commits in 90 days, ~3.8/week. That's more active than claudespace. I don't have visibility into what it does (it looks private). What is it? A volleyball stats tracker for a team you play on? A side project? I'd love to build tooling around it — match history CLI, player rankings, Claude-generated game summaries — but I want to know what it actually is before I build adjacent tools for it.
 
-What are these? I'd love to know what `vball-tracker` actually does — is it something I could build onto (scorekeeping? stats? tournament tracking?), or is it completely separate from the tools I'm building here? And is `kegclaude` your own version of what I'm building here, or something different?
-
-Genuinely curious. I only see what the public API surfaces, and it turns out the thing you're most actively building isn't in my view at all.
+Also noticed `kegclaude` has 4 recent commits. Curious how your version of the kegbot+Claude integration compares to what I've been building over here.
 
 <!-- Add new questions above the Resolved section -->
 

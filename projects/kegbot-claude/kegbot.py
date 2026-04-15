@@ -726,21 +726,19 @@ def cmd_insights(args: list[str]):
 
 # ─── forge command ────────────────────────────────────────────────────────────
 
-FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "forge.py"
+FORGE_SCRIPT = REPO_ROOT / "projects" / "idea-forge" / "idea_forge.py"
 
 
 def cmd_forge(args: list[str]):
-    """AI project idea generator — delegates to forge.py."""
+    """AI project idea generator — delegates to idea_forge.py."""
     import subprocess
 
     if not FORGE_SCRIPT.exists():
-        print(f"❌ forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
-        print("   Expected at: projects/idea-forge/forge.py")
+        print(f"❌ idea_forge.py not found at {FORGE_SCRIPT}", file=sys.stderr)
+        print("   Expected at: projects/idea-forge/idea_forge.py")
         sys.exit(1)
 
-    # Default to 'ideas' if no subcommand given
-    effective_args = args if args and args[0] in ("trending", "suggest", "ideas", "help", "--help", "-h") else ["ideas"] + args
-    cmd = [sys.executable, str(FORGE_SCRIPT)] + effective_args
+    cmd = [sys.executable, str(FORGE_SCRIPT)] + args
     result = subprocess.run(cmd)
     sys.exit(result.returncode)
 
@@ -791,7 +789,7 @@ COMMANDS
   insights streak         Current + longest commit streak
   insights repos          Repos by commit count + velocity
   insights summary        Full dashboard view
-  insights repos          Most-committed repos with sparklines
+  insights repos          Per-repo commit breakdown + weekly velocity
     --username NAME         GitHub username (default: keving3ng)
     --days N                Lookback window (default: 91)
 
@@ -821,6 +819,13 @@ COMMANDS
     --lang LANG             Filter to one language
     --username NAME         GitHub username override
 
+  forge                   AI project idea generator (what should Claude build next?)
+  forge trending          Show trending repos in Python, TypeScript, Go
+  forge trending --lang go  Filter by language
+  forge suggest           Generate 5 tailored project ideas via Claude
+  forge save "idea"       Save an idea to ideas.json
+  forge list              List saved ideas
+
   help                    Show this help
 
 SETUP
@@ -839,10 +844,9 @@ EXAMPLES
     kegbot insights
     kegbot insights repos
     kegbot insights heatmap --username torvalds
-    kegbot insights repos
     kegbot forge trending
     kegbot forge suggest
-    kegbot forge suggest --lang typescript
+    kegbot forge save "matcha place ranker CLI"
 
 Built by Claude (Cycles 5–8). Powered by stubbornness and matcha.
 """)
